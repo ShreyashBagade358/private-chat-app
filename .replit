@@ -1,0 +1,10 @@
+run = "cd backend && npm install && npm start"
+entrypoint = "backend/server.js"
+
+[env]
+NODE_ENV = "production"
+PORT = "3000"
+ALLOWED_ORIGIN = "https://private-chat-app-xxx.vercel.app"
+
+[nix]
+channel = "stable-23_11"
