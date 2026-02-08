@@ -5,6 +5,3 @@ entrypoint = "backend/server.js"
 NODE_ENV = "production"
 PORT = "3000"
 ALLOWED_ORIGIN = "https://private-chat-app-xxx.vercel.app"
-
-[nix]
-channel = "stable-23_11"
