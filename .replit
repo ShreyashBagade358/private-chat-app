@@ -3,5 +3,4 @@ entrypoint = "backend/server.js"
 
 [env]
 NODE_ENV = "production"
-PORT = "3000"
 ALLOWED_ORIGIN = "https://private-chat-app-pearl.vercel.app"
