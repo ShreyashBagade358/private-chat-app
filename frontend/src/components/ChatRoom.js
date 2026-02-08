@@ -49,7 +49,7 @@ function ChatRoom({ socket, sessionCode, messages, userCount, onSendMessage, onS
       socket.off('ice-candidate');
       socket.off('call-ended');
     };
-  }, [socket]);
+  }, [socket, endCall]);
   
   const copySessionCode = () => {
     navigator.clipboard.writeText(sessionCode);

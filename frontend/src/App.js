@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import SessionEntry from './components/SessionEntry';
 import ChatRoom from './components/ChatRoom';
@@ -123,7 +123,6 @@ function App() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const mediaData = e.target.result;
-        const mediaType = file.type.split('/')[0]; // image, video, audio, application
         
         socket.emit('send-media', {
           mediaData,
