@@ -1,16 +1,23 @@
+# Use Node.js LTS version
 FROM node:18-alpine
 
-# Create app directory
+# Set working directory
 WORKDIR /app
 
-# Install app dependencies
+# Copy package files
 COPY package*.json ./
+
+# Install dependencies
 RUN npm ci --only=production
 
-# Bundle app source
+# Copy application source
 COPY . .
 
-ENV PORT=5000
+# Expose the port
 EXPOSE 5000
 
+# Set environment variable
+ENV NODE_ENV=production
+
+# Start the server
 CMD ["node", "server.js"]
