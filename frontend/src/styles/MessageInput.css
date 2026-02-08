@@ -1,0 +1,121 @@
+.message-input {
+  background: var(--bg-dark);
+  border-top: 1px solid var(--border-color);
+  padding: 1.5rem 2rem;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.input-form {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.attach-btn {
+  width: 48px;
+  height: 48px;
+  background: var(--bg-medium);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  border: 1px solid var(--border-color);
+}
+
+.attach-btn:not(:disabled):hover {
+  background: var(--bg-light);
+  color: var(--primary-light);
+  transform: translateY(-2px);
+}
+
+.attach-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+.message-textarea {
+  flex: 1;
+  min-height: 48px;
+  max-height: 150px;
+  padding: 0.875rem 1.25rem;
+  background: var(--bg-medium);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: 1rem;
+  resize: none;
+  transition: all 0.2s ease;
+  line-height: 1.5;
+}
+
+.message-textarea:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(45, 91, 255, 0.1);
+}
+
+.message-textarea::placeholder {
+  color: var(--text-secondary);
+}
+
+.send-btn {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(45, 91, 255, 0.3);
+}
+
+.send-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(45, 91, 255, 0.4);
+}
+
+.send-btn:not(:disabled):active {
+  transform: translateY(0);
+}
+
+.send-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+.input-disabled-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  backdrop-filter: blur(4px);
+}
+
+@media (max-width: 768px) {
+  .message-input {
+    padding: 1rem 1.5rem;
+  }
+
+  .attach-btn,
+  .send-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .message-textarea {
+    padding: 0.75rem 1rem;
+  }
+}
