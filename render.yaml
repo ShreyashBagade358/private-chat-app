@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: private-chat-backend
+    env: docker
+    branch: main
+    region: oregon
+    plan: free
+    dockerfilePath: backend/Dockerfile
+    dockerBuildContext: .
+    healthCheckPath: "/"
+    autoDeploy: true
+    envVars:
+      - key: ALLOWED_ORIGIN
+        value: "https://private-chat-app-pearl.vercel.app"
