@@ -19,6 +19,11 @@ const io = socketIO(server, {
 app.use(cors({ origin: ALLOWED_ORIGIN }));
 app.use(express.json());
 
+// Health check endpoint for deployment platforms
+app.get('/', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Private Chat App Backend Running' });
+});
+
 // Store active sessions
 const sessions = new Map();
 // Format: { sessionCode: { users: [socketId1, socketId2], createdAt: timestamp, lastActivity: timestamp } }
