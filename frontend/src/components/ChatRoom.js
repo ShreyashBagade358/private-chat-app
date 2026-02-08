@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import CallInterface from './CallInterface';
@@ -14,6 +14,24 @@ function ChatRoom({ socket, sessionCode, messages, userCount, onSendMessage, onS
   const peerConnection = useRef(null);
   const localStream = useRef(null);
   const remoteStream = useRef(null);
+  
+  const endCall = useCallback(() => {
+    if (localStream.current) {
+      localStream.current.getTracks().forEach(track => track.stop());
+      localStream.current = null;
+    }
+    
+    if (peerConnection.current) {
+      peerConnection.current.close();
+      peerConnection.current = null;
+    }
+    
+    remoteStream.current = null;
+    setShowCallInterface(false);
+    setCallType(null);
+    
+    socket.emit('end-call');
+  }, [socket]);
   
   useEffect(() => {
     if (!socket) return;
@@ -150,24 +168,6 @@ function ChatRoom({ socket, sessionCode, messages, userCount, onSendMessage, onS
   
   const declineCall = () => {
     setIncomingCall(null);
-    socket.emit('end-call');
-  };
-  
-  const endCall = () => {
-    if (localStream.current) {
-      localStream.current.getTracks().forEach(track => track.stop());
-      localStream.current = null;
-    }
-    
-    if (peerConnection.current) {
-      peerConnection.current.close();
-      peerConnection.current = null;
-    }
-    
-    remoteStream.current = null;
-    setShowCallInterface(false);
-    setCallType(null);
-    
     socket.emit('end-call');
   };
   
