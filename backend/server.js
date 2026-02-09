@@ -6,22 +6,69 @@ const cors = require('cors');
 const app = express();
 const server = http.createServer(app);
 
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'http://localhost:3000';
+// ✅ CORS Configuration - Add your Vercel URL here after deployment
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  process.env.FRONTEND_URL || '', // Will be set in Render environment variables
+  // Add your Vercel URL here after frontend deployment:
+  // 'https://your-app-name.vercel.app'
+].filter(Boolean); // Remove empty strings
 
+// Socket.io configuration
 const io = socketIO(server, {
   cors: {
-    origin: ALLOWED_ORIGIN,
-    methods: ["GET", "POST"]
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        console.log('Blocked origin:', origin);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ["GET", "POST"],
+    credentials: true
   },
-  maxHttpBufferSize: 50e6 // 50MB for media files
+  maxHttpBufferSize: 50e6, // 50MB for media files
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 
-app.use(cors({ origin: ALLOWED_ORIGIN }));
+// Express CORS middleware
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 
-// Health check endpoint for deployment platforms
+// Health check endpoints for deployment platforms
 app.get('/', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'Private Chat App Backend Running' });
+  res.status(200).json({ 
+    status: 'ok', 
+    message: 'Private Chat App Backend Running',
+    timestamp: new Date().toISOString(),
+    activeSessions: sessions.size
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy',
+    uptime: process.uptime(),
+    memory: process.memoryUsage()
+  });
 });
 
 // Store active sessions
@@ -52,6 +99,7 @@ setInterval(() => {
   }
 }, 60000); // Check every minute
 
+// Socket.io connection handling
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
   
@@ -211,17 +259,31 @@ io.on('connection', (socket) => {
       }
     }
   });
+  
+  // Handle errors
+  socket.on('error', (error) => {
+    console.error('Socket error:', error);
+  });
 });
 
-const PORT = process.env.PORT || 5000;
-
+// Error handling for server
 server.on('error', (err) => {
   console.error('Server error:', err);
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use`);
+  }
   process.exit(1);
 });
 
+// Start server
+const PORT = process.env.PORT || 5000;
+
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log('='.repeat(50));
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🌐 Allowed origins:`, allowedOrigins);
+  console.log('='.repeat(50));
 });
 
 // Handle graceful shutdown
@@ -229,5 +291,25 @@ process.on('SIGTERM', () => {
   console.log('SIGTERM signal received: closing HTTP server');
   server.close(() => {
     console.log('HTTP server closed');
+    process.exit(0);
   });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT signal received: closing HTTP server');
+  server.close(() => {
+    console.log('HTTP server closed');
+    process.exit(0);
+  });
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
 });

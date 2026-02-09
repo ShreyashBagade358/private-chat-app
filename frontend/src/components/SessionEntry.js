@@ -1,125 +1,147 @@
 import React, { useState } from 'react';
 import '../styles/SessionEntry.css';
 
-function SessionEntry({ onCreateSession, onJoinSession, error }) {
-  const [code, setCode] = useState('');
-  const [isJoining, setIsJoining] = useState(false);
-  
-  const handleCodeChange = (e) => {
+function SessionEntry({ onCreateSession, onJoinSession, loading, connected }) {
+  const [joinCode, setJoinCode] = useState('');
+
+  const handleJoinSubmit = (e) => {
+    e.preventDefault();
+    onJoinSession(joinCode);
+  };
+
+  const handleJoinCodeChange = (e) => {
+    // Only allow numbers and limit to 10 digits
     const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-    setCode(value);
+    setJoinCode(value);
   };
-  
-  const handleJoin = () => {
-    if (code.length === 10) {
-      onJoinSession(code);
-    }
-  };
-  
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && code.length === 10) {
-      handleJoin();
-    }
-  };
-  
+
   return (
     <div className="session-entry">
-      <div className="entry-container">
-        <div className="logo-section">
-          <div className="logo-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-          </div>
-          <h1 className="app-title">SecureChat</h1>
-          <p className="app-subtitle">Private, encrypted conversations</p>
-        </div>
-        
-        {error && (
-          <div className="error-message">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-            </svg>
-            {error}
-          </div>
-        )}
-        
-        <div className="action-section">
-          {!isJoining ? (
-            <>
-              <button className="primary-btn create-btn" onClick={onCreateSession}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Create New Session
-              </button>
-              
-              <div className="divider">
-                <span>or</span>
-              </div>
-              
-              <button className="secondary-btn" onClick={() => setIsJoining(true)}>
-                Join Existing Session
-              </button>
-            </>
-          ) : (
-            <div className="join-section">
-              <button className="back-btn" onClick={() => setIsJoining(false)}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Back
-              </button>
-              
-              <div className="code-input-container">
-                <label htmlFor="session-code">Enter 10-digit session code</label>
-                <input
-                  id="session-code"
-                  type="text"
-                  className="code-input"
-                  value={code}
-                  onChange={handleCodeChange}
-                  onKeyPress={handleKeyPress}
-                  placeholder="0000000000"
-                  maxLength={10}
-                  autoFocus
-                />
-                <div className="code-progress">
-                  {code.length}/10
-                </div>
-              </div>
-              
-              <button 
-                className="primary-btn join-btn"
-                onClick={handleJoin}
-                disabled={code.length !== 10}
-              >
-                Join Session
-              </button>
+      <div className="session-welcome">
+        <div className="welcome-icon">🔒</div>
+        <h2>Welcome to Private Chat</h2>
+        <p>Create a new session or join an existing one to start chatting securely</p>
+      </div>
+
+      <div className="session-options">
+        <div className="option-card">
+          <div className="card-header">
+            <div className="card-icon create-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                      d="M12 4v16m8-8H4" />
+              </svg>
             </div>
-          )}
+            <h3>Create New Session</h3>
+          </div>
+          <p className="card-description">
+            Start a new private chat session and share the code with your contact
+          </p>
+          <button
+            onClick={onCreateSession}
+            disabled={!connected || loading}
+            className="btn btn-primary btn-large"
+          >
+            {loading ? (
+              <>
+                <span className="spinner"></span>
+                Creating...
+              </>
+            ) : (
+              <>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                        d="M12 4v16m8-8H4" />
+                </svg>
+                Create Session
+              </>
+            )}
+          </button>
         </div>
-        
-        <div className="features-list">
-          <div className="feature-item">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
-            </svg>
-            <span>End-to-end encrypted</span>
+
+        <div className="divider">
+          <span>OR</span>
+        </div>
+
+        <div className="option-card">
+          <div className="card-header">
+            <div className="card-icon join-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                      d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+              </svg>
+            </div>
+            <h3>Join Existing Session</h3>
           </div>
-          <div className="feature-item">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-            </svg>
-            <span>No registration required</span>
-          </div>
-          <div className="feature-item">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
-            </svg>
-            <span>Share media & files</span>
-          </div>
+          <p className="card-description">
+            Enter the 10-digit session code shared with you
+          </p>
+          <form onSubmit={handleJoinSubmit} className="join-form">
+            <div className="input-group">
+              <input
+                type="text"
+                value={joinCode}
+                onChange={handleJoinCodeChange}
+                placeholder="Enter 10-digit code"
+                maxLength={10}
+                className="session-code-input"
+                disabled={!connected || loading}
+              />
+              <div className="input-hint">
+                {joinCode.length}/10 digits
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={!connected || loading || joinCode.length !== 10}
+              className="btn btn-primary btn-large"
+            >
+              {loading ? (
+                <>
+                  <span className="spinner"></span>
+                  Joining...
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                          d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                  </svg>
+                  Join Session
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {!connected && (
+        <div className="connection-warning">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+          </svg>
+          <span>Connecting to server...</span>
+        </div>
+      )}
+
+      <div className="features-list">
+        <div className="feature-item">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+          </svg>
+          <span>End-to-end encrypted</span>
+        </div>
+        <div className="feature-item">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+          <span>No registration required</span>
+        </div>
+        <div className="feature-item">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+          </svg>
+          <span>Text, media & voice/video calls</span>
         </div>
       </div>
     </div>
