@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import ChatRoom from './components/ChatRoom';
 import SessionEntry from './components/SessionEntry';
-import './App.css';
-
+import './styles/App.css';
 // ✅ CRITICAL: Use environment variable for backend URL
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
