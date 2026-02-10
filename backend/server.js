@@ -11,7 +11,8 @@ const server = http.createServer(app);
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://private-chat-app-ten.vercel.app',  // ✅ Your Vercel URL
+  'https://private-chat-app-iota.vercel.app',
+  'http://192.168.43.131:3000',  // ✅ Your Vercel URL
   process.env.FRONTEND_URL || '',
 ].filter(Boolean);
 
@@ -276,7 +277,7 @@ server.on('error', (err) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8000;
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log('='.repeat(50));
