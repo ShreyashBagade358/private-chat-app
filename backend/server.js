@@ -7,13 +7,13 @@ const app = express();
 const server = http.createServer(app);
 
 // ✅ CORS Configuration - Add your Vercel URL here after deployment
+// ✅ CORS Configuration - Add your Vercel URL here after deployment
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  process.env.FRONTEND_URL || '', // Will be set in Render environment variables
-  // Add your Vercel URL here after frontend deployment:
-  // 'https://your-app-name.vercel.app'
-].filter(Boolean); // Remove empty strings
+  'https://private-chat-app-ten.vercel.app',  // ✅ Your Vercel URL
+  process.env.FRONTEND_URL || '',
+].filter(Boolean);
 
 // Socket.io configuration
 const io = socketIO(server, {
