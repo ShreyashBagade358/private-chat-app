@@ -47,20 +47,21 @@ function MessageList({ messages, isTyping }) {
     }
     
     if (msg.type === 'media') {
-      const mediaType = msg.mediaType.split('/')[0];
+      // Handle cases where mediaType might be undefined
+      const mediaType = msg.mediaType ? msg.mediaType.split('/')[0] : 'application';
       
       return (
         <div key={index} className={`message media-message ${msg.isMine ? 'mine' : 'theirs'}`}>
           <div className="message-content">
             {mediaType === 'image' && (
               <div className="media-container image-container">
-                <img src={msg.mediaData} alt={msg.fileName} />
+                <img src={msg.mediaData} alt={msg.fileName} loading="lazy" />
               </div>
             )}
             
             {mediaType === 'video' && (
               <div className="media-container video-container">
-                <video controls>
+                <video controls preload="metadata">
                   <source src={msg.mediaData} type={msg.mediaType} />
                   Your browser does not support the video tag.
                 </video>
@@ -69,7 +70,7 @@ function MessageList({ messages, isTyping }) {
             
             {mediaType === 'audio' && (
               <div className="media-container audio-container">
-                <audio controls>
+                <audio controls preload="metadata">
                   <source src={msg.mediaData} type={msg.mediaType} />
                   Your browser does not support the audio element.
                 </audio>
@@ -87,13 +88,14 @@ function MessageList({ messages, isTyping }) {
                   </svg>
                 </div>
                 <div className="file-info">
-                  <span className="file-name">{msg.fileName}</span>
-                  <span className="file-size">{formatFileSize(msg.fileSize)}</span>
+                  <span className="file-name" title={msg.fileName}>{msg.fileName}</span>
+                  <span className="file-size">{formatFileSize(msg.fileSize || 0)}</span>
                 </div>
                 <a 
                   href={msg.mediaData} 
                   download={msg.fileName}
                   className="download-btn"
+                  title="Download file"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 

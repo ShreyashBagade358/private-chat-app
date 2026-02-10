@@ -198,10 +198,14 @@ io.on('connection', (socket) => {
   
   // Handle media sharing (images, videos, audio, documents)
   socket.on('send-media', ({ mediaData, mediaType, fileName, fileSize }) => {
+    console.log(`Media upload from ${socket.id} in session ${socket.sessionCode}:`, fileName, `(${formatFileSize(fileSize)})`);
+    
     if (socket.sessionCode) {
       const session = sessions.get(socket.sessionCode);
       if (session) {
         session.lastActivity = Date.now();
+        
+        // Broadcast to other user in session
         socket.to(socket.sessionCode).emit('receive-media', {
           mediaData,
           mediaType,
@@ -210,9 +214,24 @@ io.on('connection', (socket) => {
           sender: socket.id,
           timestamp: Date.now()
         });
+        
+        console.log(`Media broadcasted to session ${socket.sessionCode}`);
+      } else {
+        console.log(`Session ${socket.sessionCode} not found for media upload`);
       }
+    } else {
+      console.log(`Socket ${socket.id} has no session code for media upload`);
     }
   });
+
+  // Helper function to format file size
+  function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
   
   // WebRTC signaling for voice/video calls
   socket.on('call-user', ({ offer, callType }) => {

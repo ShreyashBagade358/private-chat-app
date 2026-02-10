@@ -240,6 +240,8 @@
   gap: 1rem;
   background: var(--bg-light);
   border-radius: 12px;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .file-icon {

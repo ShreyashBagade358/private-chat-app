@@ -4,6 +4,7 @@ import '../styles/MessageInput.css';
 function MessageInput({ onSendMessage, onSendMedia, onTyping, disabled }) {
   const [message, setMessage] = useState('');
   const [isTypingTimeout, setIsTypingTimeout] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
   
   const handleMessageChange = (e) => {
@@ -43,9 +44,24 @@ function MessageInput({ onSendMessage, onSendMedia, onTyping, disabled }) {
       // Check file size (max 50MB)
       if (file.size > 50 * 1024 * 1024) {
         alert('File size must be less than 50MB');
+        e.target.value = '';
         return;
       }
-      onSendMedia(file);
+      
+      setIsUploading(true);
+      
+      // Read file as base64
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const mediaData = event.target.result;
+        onSendMedia(mediaData, file.type, file.name, file.size);
+        setIsUploading(false);
+      };
+      reader.onerror = () => {
+        alert('Error reading file. Please try again.');
+        setIsUploading(false);
+      };
+      reader.readAsDataURL(file);
     }
     // Reset input
     e.target.value = '';
@@ -60,13 +76,19 @@ function MessageInput({ onSendMessage, onSendMedia, onTyping, disabled }) {
   
   return (
     <div className="message-input">
+      {isUploading && (
+        <div className="upload-indicator">
+          <span className="upload-spinner"></span>
+          <span>Uploading file...</span>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="input-form">
         <button
           type="button"
           className="attach-btn"
           onClick={() => fileInputRef.current?.click()}
-          disabled={disabled}
-          title="Attach file"
+          disabled={disabled || isUploading}
+          title="Attach any file"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
@@ -79,7 +101,6 @@ function MessageInput({ onSendMessage, onSendMedia, onTyping, disabled }) {
           type="file"
           onChange={handleFileSelect}
           style={{ display: 'none' }}
-          accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
         />
         
         <textarea
@@ -87,8 +108,8 @@ function MessageInput({ onSendMessage, onSendMedia, onTyping, disabled }) {
           value={message}
           onChange={handleMessageChange}
           onKeyPress={handleKeyPress}
-          placeholder={disabled ? "Waiting for other user to join..." : "Type a message..."}
-          disabled={disabled}
+          placeholder={disabled ? "Waiting for other user to join..." : isUploading ? "Uploading file..." : "Type a message..."}
+          disabled={disabled || isUploading}
           rows={1}
         />
         
