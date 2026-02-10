@@ -6,25 +6,32 @@
 .env.production.local
 
 # Dependencies
-node_modules/
+/node_modules
+/.pnp
+.pnp.js
 
 # Build outputs
-build/
-dist/
+/build
+/dist
+
+# Testing
+/coverage
 
 # Logs
-*.log
 npm-debug.log*
-
-# OS files
-.DS_Store
-Thumbs.db
+yarn-debug.log*
+yarn-error.log*
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
+
+# OS files
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Misc
 *.pem

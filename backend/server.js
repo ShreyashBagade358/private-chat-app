@@ -7,14 +7,18 @@ const app = express();
 const server = http.createServer(app);
 
 // ✅ CORS Configuration - Add your Vercel URL here after deployment
-// ✅ CORS Configuration - Add your Vercel URL here after deployment
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
+  'http://192.168.43.131:3000',
   'https://private-chat-app-iota.vercel.app',
-  'http://192.168.43.131:3000',  // ✅ Your Vercel URL
+  'https://private-chat-app.vercel.app',
   process.env.FRONTEND_URL || '',
+  process.env.REACT_APP_BACKEND_URL || '',
 ].filter(Boolean);
+
+// Log allowed origins for debugging
+console.log('📋 Allowed CORS origins:', allowedOrigins);
 
 // Socket.io configuration
 const io = socketIO(server, {
@@ -35,7 +39,12 @@ const io = socketIO(server, {
   },
   maxHttpBufferSize: 50e6, // 50MB for media files
   pingTimeout: 60000,
-  pingInterval: 25000
+  pingInterval: 25000,
+  transports: ['websocket', 'polling'], // ✅ Support both for better compatibility
+  allowEIO3: true, // ✅ Allow Engine.IO v3 clients (backward compatibility)
+  perMessageDeflate: {
+    threshold: 1024 // Compress messages larger than 1KB
+  }
 });
 
 // Express CORS middleware

@@ -1,0 +1,37 @@
+# Render Web Service Configuration for Private Chat Backend
+
+services:
+  - type: web
+    name: private-chat-backend
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: FRONTEND_URL
+        sync: false  # You will set this manually after deploying frontend
+    healthCheckPath: /health
+    healthCheckTimeout: 100
+    autoDeploy: true
+    plan: free  # Change to 'starter' for production
+
+# Static Site for Frontend (if hosting frontend on Render too)
+# services:
+#   - type: static
+#     name: private-chat-frontend
+#     runtime: static
+#     buildCommand: cd ../frontend && npm install && npm run build
+#     staticPublishPath: ../frontend/build
+#     envVars:
+#       - key: REACT_APP_BACKEND_URL
+#         fromService:
+#           name: private-chat-backend
+#           type: web
+#           property: url
+#     routes:
+#       - type: rewrite
+#         source: /*
+#         destination: /index.html

@@ -4,7 +4,8 @@ import ChatRoom from './components/ChatRoom';
 import SessionEntry from './components/SessionEntry';
 import './styles/App.css';
 // ✅ CRITICAL: Use environment variable for backend URL
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000' ||'https://private-chat-app-nefm.onrender.com';
+// Priority: 1. Environment variable (production), 2. Localhost (development)
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 
 console.log('🔗 Backend URL:', BACKEND_URL);
 
