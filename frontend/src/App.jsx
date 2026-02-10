@@ -158,7 +158,7 @@ function App() {
     socket.emit('create-session');
   };
 
-  // Join existing session
+    // Join existing session
   const handleJoinSession = (code) => {
     if (!socket || !connected) {
       setError('Not connected to server. Please wait...');
@@ -172,6 +172,7 @@ function App() {
     
     setLoading(true);
     setError('');
+    setSessionCode(code); // Set session code immediately for joining user
     socket.emit('join-session', { sessionCode: code });
   };
 
