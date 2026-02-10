@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import '../styles/MessageInput.css';
 
 function MessageInput({ onSendMessage, onSendMedia, onTyping, disabled }) {
@@ -6,6 +6,7 @@ function MessageInput({ onSendMessage, onSendMedia, onTyping, disabled }) {
   const [isTypingTimeout, setIsTypingTimeout] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
+  const isProcessingFile = useRef(false);
   
   const handleMessageChange = (e) => {
     setMessage(e.target.value);
@@ -26,6 +27,12 @@ function MessageInput({ onSendMessage, onSendMedia, onTyping, disabled }) {
     setIsTypingTimeout(timeout);
   };
   
+  const handleAttachClick = useCallback(() => {
+    if (!disabled && !isUploading && !isProcessingFile.current && fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  }, [disabled, isUploading]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (message.trim() && !disabled) {
@@ -38,34 +45,66 @@ function MessageInput({ onSendMessage, onSendMedia, onTyping, disabled }) {
     }
   };
   
-  const handleFileSelect = (e) => {
+  const handleFileSelect = useCallback((e) => {
+    // Prevent double-clicks or multiple rapid selections
+    if (isProcessingFile.current) {
+      e.target.value = '';
+      return;
+    }
+
     const file = e.target.files[0];
-    if (file) {
+    if (!file) {
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      isProcessingFile.current = true;
+
       // Check file size (max 50MB)
       if (file.size > 50 * 1024 * 1024) {
         alert('File size must be less than 50MB');
         e.target.value = '';
+        isProcessingFile.current = false;
         return;
       }
-      
+
       setIsUploading(true);
-      
+
       // Read file as base64
       const reader = new FileReader();
       reader.onload = (event) => {
-        const mediaData = event.target.result;
-        onSendMedia(mediaData, file.type, file.name, file.size);
-        setIsUploading(false);
+        try {
+          const mediaData = event.target.result;
+          if (mediaData && typeof mediaData === 'string') {
+            onSendMedia(mediaData, file.type || 'application/octet-stream', file.name, file.size);
+          } else {
+            alert('Error: Invalid file data');
+          }
+        } catch (error) {
+          console.error('Error processing file:', error);
+          alert('Error processing file. Please try again.');
+        } finally {
+          setIsUploading(false);
+          isProcessingFile.current = false;
+          e.target.value = '';
+        }
       };
       reader.onerror = () => {
         alert('Error reading file. Please try again.');
         setIsUploading(false);
+        isProcessingFile.current = false;
+        e.target.value = '';
       };
       reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error in handleFileSelect:', error);
+      alert('An error occurred. Please try again.');
+      setIsUploading(false);
+      isProcessingFile.current = false;
+      e.target.value = '';
     }
-    // Reset input
-    e.target.value = '';
-  };
+  }, [onSendMedia]);
   
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -86,7 +125,7 @@ function MessageInput({ onSendMessage, onSendMedia, onTyping, disabled }) {
         <button
           type="button"
           className="attach-btn"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={handleAttachClick}
           disabled={disabled || isUploading}
           title="Attach any file"
         >

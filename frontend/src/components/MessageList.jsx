@@ -13,24 +13,38 @@ function MessageList({ messages, isTyping }) {
   }, [messages, isTyping]);
   
   const formatTime = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) {
+        return '--:--';
+      }
+      return date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    } catch (error) {
+      return '--:--';
+    }
   };
   
   const formatFileSize = (bytes) => {
+    if (bytes === null || bytes === undefined || isNaN(bytes)) return '0 B';
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
   
   const renderMessage = (msg, index) => {
+    // Safety check for invalid messages
+    if (!msg || typeof msg !== 'object') {
+      console.warn('Invalid message object:', msg);
+      return null;
+    }
+
     if (msg.type === 'system') {
       return (
         <div key={index} className="system-message">
-          <span>{msg.text || msg.message}</span>
+          <span>{msg.text || msg.message || 'System message'}</span>
         </div>
       );
     }
@@ -39,7 +53,7 @@ function MessageList({ messages, isTyping }) {
       return (
         <div key={index} className={`message ${msg.isMine ? 'mine' : 'theirs'}`}>
           <div className="message-content">
-            <p>{msg.text || msg.message}</p>
+            <p>{msg.text || msg.message || ''}</p>
           </div>
           <div className="message-time">{formatTime(msg.timestamp)}</div>
         </div>
@@ -47,6 +61,12 @@ function MessageList({ messages, isTyping }) {
     }
     
     if (msg.type === 'media') {
+      // Safety check for media messages
+      if (!msg.mediaData) {
+        console.warn('Media message without mediaData:', msg);
+        return null;
+      }
+
       // Handle cases where mediaType might be undefined
       const mediaType = msg.mediaType ? msg.mediaType.split('/')[0] : 'application';
       

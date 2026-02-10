@@ -3,11 +3,44 @@ import io from 'socket.io-client';
 import ChatRoom from './components/ChatRoom';
 import SessionEntry from './components/SessionEntry';
 import './styles/App.css';
+
 // ✅ CRITICAL: Use environment variable for backend URL
 // Priority: 1. Environment variable (production), 2. Localhost (development)
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 
 console.log('🔗 Backend URL:', BACKEND_URL);
+
+// Error Boundary Component to catch errors and prevent blue screen
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-boundary">
+          <div className="error-content">
+            <h2>Something went wrong</h2>
+            <p>The application encountered an error. Please refresh the page to continue.</p>
+            <button onClick={() => window.location.reload()}>Refresh Page</button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 function App() {
   const [socket, setSocket] = useState(null);
@@ -207,7 +240,12 @@ function App() {
 
     // Send media (images, videos, files)
   const handleSendMedia = (mediaData, mediaType, fileName, fileSize) => {
-    if (!socket || !sessionCode) return;
+    if (!socket || !sessionCode) {
+      console.error('Cannot send media: no socket or session');
+      return;
+    }
+    
+    console.log('Sending media:', fileName, 'Type:', mediaType, 'Size:', fileSize);
     
     // Send to other user
     socket.emit('send-media', { mediaData, mediaType, fileName, fileSize });
@@ -318,4 +356,13 @@ function App() {
   );
 }
 
-export default App;// build fix
+// Wrap App with ErrorBoundary
+function AppWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  );
+}
+
+export default AppWithErrorBoundary;
