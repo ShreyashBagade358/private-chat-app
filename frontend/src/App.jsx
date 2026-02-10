@@ -92,17 +92,20 @@ function App() {
 
     newSocket.on('user-joined', ({ users, socketId }) => {
       console.log('User joined. Total users:', users);
-      setUserCount(users);
-      setMessages(prev => [...prev, {
-        type: 'system',
-        text: 'User joined the session',
-        timestamp: Date.now()
-      }]);
+      setUserCount(users || 2);
+      // Only show system message for the existing user (not the one who just joined)
+      if (newSocket.id !== socketId) {
+        setMessages(prev => [...prev, {
+          type: 'system',
+          text: 'User joined the session',
+          timestamp: Date.now()
+        }]);
+      }
     });
 
     newSocket.on('user-left', () => {
       console.log('User left the session');
-      setUserCount(1);
+      setUserCount(prev => Math.max(1, prev - 1));
       setMessages(prev => [...prev, {
         type: 'system',
         text: 'User left the session',
@@ -181,6 +184,8 @@ function App() {
     
     setLoading(true);
     setError('');
+    // Optimistically set session code so UI switches to chat room
+    setSessionCode(code);
     socket.emit('join-session', { sessionCode: code });
   };
 

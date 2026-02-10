@@ -30,7 +30,7 @@ function MessageList({ messages, isTyping }) {
     if (msg.type === 'system') {
       return (
         <div key={index} className="system-message">
-          <span>{msg.message}</span>
+          <span>{msg.text || msg.message}</span>
         </div>
       );
     }
@@ -39,7 +39,7 @@ function MessageList({ messages, isTyping }) {
       return (
         <div key={index} className={`message ${msg.isMine ? 'mine' : 'theirs'}`}>
           <div className="message-content">
-            <p>{msg.message}</p>
+            <p>{msg.text || msg.message}</p>
           </div>
           <div className="message-time">{formatTime(msg.timestamp)}</div>
         </div>
