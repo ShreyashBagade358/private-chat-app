@@ -83,6 +83,13 @@ function App() {
       setLoading(false);
     });
 
+    newSocket.on('join-success', ({ sessionCode, users }) => {
+      console.log('Successfully joined session:', sessionCode);
+      setSessionCode(sessionCode);
+      setUserCount(users);
+      setLoading(false);
+    });
+
     newSocket.on('user-joined', ({ users, socketId }) => {
       console.log('User joined. Total users:', users);
       setUserCount(users);
@@ -107,8 +114,9 @@ function App() {
     newSocket.on('receive-message', ({ message, sender, timestamp }) => {
       console.log('Message received:', message);
       setMessages(prev => [...prev, {
-        type: 'received',
+        type: 'text',
         text: message,
+        isMine: false,
         sender,
         timestamp
       }]);
@@ -118,11 +126,12 @@ function App() {
     newSocket.on('receive-media', ({ mediaData, mediaType, fileName, fileSize, sender, timestamp }) => {
       console.log('Media received:', mediaType, fileName);
       setMessages(prev => [...prev, {
-        type: 'received',
+        type: 'media',
         mediaData,
         mediaType,
         fileName,
         fileSize,
+        isMine: false,
         sender,
         timestamp
       }]);
@@ -172,11 +181,10 @@ function App() {
     
     setLoading(true);
     setError('');
-    setSessionCode(code); // Set session code immediately for joining user
     socket.emit('join-session', { sessionCode: code });
   };
 
-  // Send text message
+    // Send text message
   const handleSendMessage = (message) => {
     if (!socket || !sessionCode || !message.trim()) return;
     
@@ -185,13 +193,14 @@ function App() {
     
     // Add to own messages
     setMessages(prev => [...prev, {
-      type: 'sent',
+      type: 'text',
       text: message,
+      isMine: true,
       timestamp: Date.now()
     }]);
   };
 
-  // Send media (images, videos, files)
+    // Send media (images, videos, files)
   const handleSendMedia = (mediaData, mediaType, fileName, fileSize) => {
     if (!socket || !sessionCode) return;
     
@@ -200,11 +209,12 @@ function App() {
     
     // Add to own messages
     setMessages(prev => [...prev, {
-      type: 'sent',
+      type: 'media',
       mediaData,
       mediaType,
       fileName,
       fileSize,
+      isMine: true,
       timestamp: Date.now()
     }]);
   };

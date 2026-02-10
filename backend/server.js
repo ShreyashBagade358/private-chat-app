@@ -155,21 +155,34 @@ io.on('connection', (socket) => {
       socketId: socket.id
     });
     
+    // Send confirmation to joining user
+    socket.emit('join-success', { 
+      sessionCode: sessionCode,
+      users: session.users.length 
+    });
+    
     console.log(`User ${socket.id} joined session ${sessionCode}`);
   });
   
   // Handle text messages
   socket.on('send-message', ({ message }) => {
+    console.log(`Message received from ${socket.id} in session ${socket.sessionCode}:`, message);
     if (socket.sessionCode) {
       const session = sessions.get(socket.sessionCode);
       if (session) {
         session.lastActivity = Date.now();
+        console.log(`Broadcasting message to session ${socket.sessionCode}, users in session:`, session.users);
         socket.to(socket.sessionCode).emit('receive-message', {
           message,
           sender: socket.id,
           timestamp: Date.now()
         });
+        console.log(`Message broadcasted to room ${socket.sessionCode}`);
+      } else {
+        console.log(`Session ${socket.sessionCode} not found`);
       }
+    } else {
+      console.log(`Socket ${socket.id} has no sessionCode`);
     }
   });
   
