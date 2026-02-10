@@ -61,6 +61,39 @@ function CallInterface({ callType, localStream, remoteStream, onEndCall }) {
     }
   };
   
+  const toggleScreenShare = async () => {
+    if (!peerConnection.current) return;
+    
+    try {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true
+      });
+      
+      const screenTrack = screenStream.getVideoTracks()[0];
+      const sender = peerConnection.current.getSenders().find(s => 
+        s.track && s.track.kind === 'video'
+      );
+      
+      if (sender) {
+        await sender.replaceTrack(screenTrack);
+      }
+      
+      screenTrack.onended = async () => {
+        // Switch back to camera when screen sharing stops
+        if (localStream.current) {
+          const cameraTrack = localStream.current.getVideoTracks()[0];
+          if (cameraTrack && sender) {
+            await sender.replaceTrack(cameraTrack);
+          }
+        }
+      };
+    } catch (error) {
+      console.error('Error sharing screen:', error);
+      alert('Could not share screen. Please try again.');
+    }
+  };
+  
   return (
     <div className="call-interface">
       <div className="call-header">
@@ -136,21 +169,33 @@ function CallInterface({ callType, localStream, remoteStream, onEndCall }) {
         </button>
         
         {callType === 'video' && (
-          <button
-            className={`control-btn ${isVideoOff ? 'active' : ''}`}
-            onClick={toggleVideo}
-            title={isVideoOff ? 'Turn on camera' : 'Turn off camera'}
-          >
-            {isVideoOff ? (
+          <>
+            <button
+              className={`control-btn ${isVideoOff ? 'active' : ''}`}
+              onClick={toggleVideo}
+              title={isVideoOff ? 'Turn on camera' : 'Turn off camera'}
+            >
+              {isVideoOff ? (
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.21 0 .39-.08.54-.18L19.73 21 21 19.73 3.27 2z"/>
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                </svg>
+              )}
+            </button>
+            
+            <button
+              className="control-btn"
+              onClick={toggleScreenShare}
+              title="Share screen"
+            >
               <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.21 0 .39-.08.54-.18L19.73 21 21 19.73 3.27 2z"/>
+                <path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/>
               </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
-              </svg>
-            )}
-          </button>
+            </button>
+          </>
         )}
         
         <button

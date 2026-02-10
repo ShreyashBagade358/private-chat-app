@@ -20,12 +20,79 @@ function ChatRoom({
   const [incomingCall, setIncomingCall] = useState(null);
   const [copied, setCopied] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [callStatus, setCallStatus] = useState('idle'); // 'idle', 'calling', 'ringing', 'connected'
   
   const peerConnection = useRef(null);
   const localStream = useRef(null);
   const remoteStream = useRef(null);
+  const callTimeoutRef = useRef(null);
+  const ringtoneRef = useRef(null);
+  
+  // Create ringtone audio element
+  useEffect(() => {
+    // Simple ringtone using Web Audio API oscillator
+    ringtoneRef.current = {
+      audioContext: null,
+      oscillator: null,
+      gainNode: null,
+      play: function() {
+        try {
+          this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          this.oscillator = this.audioContext.createOscillator();
+          this.gainNode = this.audioContext.createGain();
+          
+          this.oscillator.connect(this.gainNode);
+          this.gainNode.connect(this.audioContext.destination);
+          
+          this.oscillator.frequency.value = 800;
+          this.oscillator.type = 'sine';
+          this.gainNode.gain.value = 0.3;
+          
+          // Ring pattern: 1 second on, 1 second off
+          let isPlaying = true;
+          const interval = setInterval(() => {
+            if (this.gainNode) {
+              this.gainNode.gain.value = isPlaying ? 0 : 0.3;
+              isPlaying = !isPlaying;
+            }
+          }, 1000);
+          
+          this.oscillator.start();
+          this.intervalId = interval;
+        } catch (e) {
+          console.error('Could not play ringtone:', e);
+        }
+      },
+      stop: function() {
+        if (this.intervalId) {
+          clearInterval(this.intervalId);
+          this.intervalId = null;
+        }
+        if (this.oscillator) {
+          this.oscillator.stop();
+          this.oscillator = null;
+        }
+        if (this.audioContext) {
+          this.audioContext.close();
+          this.audioContext = null;
+        }
+      }
+    };
+    
+    return () => {
+      if (ringtoneRef.current) {
+        ringtoneRef.current.stop();
+      }
+    };
+  }, []);
   
   const endCall = useCallback(() => {
+    // Clear any pending timeouts
+    if (callTimeoutRef.current) {
+      clearTimeout(callTimeoutRef.current);
+      callTimeoutRef.current = null;
+    }
+    
     if (localStream.current) {
       localStream.current.getTracks().forEach(track => track.stop());
       localStream.current = null;
@@ -39,6 +106,8 @@ function ChatRoom({
     remoteStream.current = null;
     setShowCallInterface(false);
     setCallType(null);
+    setCallStatus('idle');
+    setIncomingCall(null);
     
     if (socket) {
       socket.emit('end-call');
@@ -99,12 +168,19 @@ function ChatRoom({
   const initializeCall = async (type) => {
     try {
       setCallType(type);
+      setCallStatus('calling');
       setShowCallInterface(true);
       
       const constraints = {
         audio: true,
         video: type === 'video'
       };
+      
+      // Check permissions first
+      const permissionStatus = await navigator.permissions.query({ name: type === 'video' ? 'camera' : 'microphone' });
+      if (permissionStatus.state === 'denied') {
+        throw new Error(`Permission denied for ${type === 'video' ? 'camera' : 'microphone'}`);
+      }
       
       localStream.current = await navigator.mediaDevices.getUserMedia(constraints);
       
@@ -113,7 +189,9 @@ function ChatRoom({
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
           { urls: 'stun:stun2.l.google.com:19302' }
-        ]
+        ],
+        iceTransportPolicy: 'all',
+        iceCandidatePoolSize: 10
       });
       
       localStream.current.getTracks().forEach(track => {
@@ -121,7 +199,9 @@ function ChatRoom({
       });
       
       peerConnection.current.ontrack = (event) => {
+        console.log('Received remote track');
         remoteStream.current = event.streams[0];
+        setCallStatus('connected');
       };
       
       peerConnection.current.onicecandidate = (event) => {
@@ -131,9 +211,13 @@ function ChatRoom({
       };
       
       peerConnection.current.oniceconnectionstatechange = () => {
-        console.log('ICE connection state:', peerConnection.current.iceConnectionState);
-        if (peerConnection.current.iceConnectionState === 'failed') {
-          console.error('ICE connection failed');
+        const state = peerConnection.current?.iceConnectionState;
+        console.log('ICE connection state:', state);
+        
+        if (state === 'connected' || state === 'completed') {
+          setCallStatus('connected');
+        } else if (state === 'failed' || state === 'closed') {
+          console.error('ICE connection failed or closed');
           endCall();
         }
       };
@@ -142,9 +226,30 @@ function ChatRoom({
       await peerConnection.current.setLocalDescription(offer);
       
       socket.emit('call-user', { offer, callType: type });
+      
+      // Set timeout for unanswered call (30 seconds)
+      callTimeoutRef.current = setTimeout(() => {
+        if (callStatus === 'calling') {
+          alert('Call timed out - no answer');
+          endCall();
+        }
+      }, 30000);
+      
     } catch (error) {
       console.error('Error initializing call:', error);
-      alert('Could not access camera/microphone. Please check permissions.');
+      let errorMessage = 'Could not start call. ';
+      
+      if (error.name === 'NotAllowedError' || error.message.includes('Permission denied')) {
+        errorMessage += 'Please allow camera/microphone permissions.';
+      } else if (error.name === 'NotFoundError') {
+        errorMessage += `${type === 'video' ? 'Camera' : 'Microphone'} not found.`;
+      } else if (error.name === 'NotReadableError') {
+        errorMessage += `${type === 'video' ? 'Camera' : 'Microphone'} is already in use.`;
+      } else {
+        errorMessage += error.message;
+      }
+      
+      alert(errorMessage);
       endCall();
     }
   };
@@ -152,6 +257,7 @@ function ChatRoom({
   const answerCall = async () => {
     try {
       setCallType(incomingCall.callType);
+      setCallStatus('ringing');
       setShowCallInterface(true);
       
       const constraints = {
@@ -166,7 +272,9 @@ function ChatRoom({
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
           { urls: 'stun:stun2.l.google.com:19302' }
-        ]
+        ],
+        iceTransportPolicy: 'all',
+        iceCandidatePoolSize: 10
       });
       
       localStream.current.getTracks().forEach(track => {
@@ -174,12 +282,26 @@ function ChatRoom({
       });
       
       peerConnection.current.ontrack = (event) => {
+        console.log('Received remote track');
         remoteStream.current = event.streams[0];
+        setCallStatus('connected');
       };
       
       peerConnection.current.onicecandidate = (event) => {
         if (event.candidate) {
           socket.emit('ice-candidate', { candidate: event.candidate });
+        }
+      };
+      
+      peerConnection.current.oniceconnectionstatechange = () => {
+        const state = peerConnection.current?.iceConnectionState;
+        console.log('ICE connection state:', state);
+        
+        if (state === 'connected' || state === 'completed') {
+          setCallStatus('connected');
+        } else if (state === 'failed' || state === 'closed') {
+          console.error('ICE connection failed or closed');
+          endCall();
         }
       };
       
@@ -350,13 +472,13 @@ function ChatRoom({
         </div>
       )}
       
-      <MessageList messages={messages} isTyping={isTyping} />
+        <MessageList messages={messages} isTyping={isTyping} />
       
       <MessageInput
         onSendMessage={onSendMessage}
         onSendMedia={onSendMedia}
         onTyping={onTyping}
-        disabled={userCount < 2}
+        disabled={userCount < 2 || showCallInterface}
       />
     </div>
   );
