@@ -8,6 +8,8 @@ import './styles/App.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 
+console.log('🔌 Backend URL:', BACKEND_URL);
+
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -51,6 +53,7 @@ function App() {
   // Refs for socket event handlers to access latest state
   const isCreatorRef = useRef(false);
   const selectedContactRef = useRef(null);
+  const sessionCodeRef = useRef('');
   
   // Keep refs in sync with state
   useEffect(() => {
@@ -61,8 +64,16 @@ function App() {
     selectedContactRef.current = selectedContact;
   }, [selectedContact]);
 
+  useEffect(() => {
+    sessionCodeRef.current = sessionCode;
+  }, [sessionCode]);
+
   // Define handleLeaveSession first so useEffect can use it
   const handleLeaveSession = useCallback(() => {
+    const currentSessionCode = sessionCodeRef.current;
+    if (socket && currentSessionCode) {
+      socket.emit('leave-session');
+    }
     if (socket) {
       socket.disconnect();
       socket.connect();
@@ -159,6 +170,13 @@ function App() {
       setLoading(false);
     });
 
+    // Session error (creation failed)
+    newSocket.on('session-error', ({ message }) => {
+      console.error('❌ Session error:', message);
+      setError(message);
+      setLoading(false);
+    });
+
     // User joined (both users receive this)
     newSocket.on('user-joined', ({ users, socketId }) => {
       console.log('👤 User joined. Total:', users, 'Socket:', socketId);
@@ -245,7 +263,7 @@ function App() {
     return () => {
       newSocket.close();
     };
-  }, [handleLeaveSession]);
+  }, []);
 
   const handleCreateSession = () => {
     if (!socket || !connected) {
@@ -263,15 +281,15 @@ function App() {
       return;
     }
     
-    if (!code || code.trim().length !== 10) {
-      setError('Please enter a valid 10-digit code');
+    if (!code || code.trim().length !== 6) {
+      setError('Please enter a valid 6-character code');
       return;
     }
     
     console.log('Joining session:', code);
     setLoading(true);
     setError('');
-    socket.emit('join-session', { sessionCode: code });
+    socket.emit('join-session', { sessionCode: code.trim().toUpperCase() });
   };
 
   const handleSendMessage = (message) => {

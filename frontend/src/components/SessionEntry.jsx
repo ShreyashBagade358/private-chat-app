@@ -19,7 +19,7 @@ function SessionEntry({ onCreateSession, onJoinSession, loading, connected, sess
   };
 
   const handleJoinCodeChange = (e) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+    const value = e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toUpperCase();
     setJoinCode(value);
   };
 
@@ -152,7 +152,7 @@ function SessionEntry({ onCreateSession, onJoinSession, loading, connected, sess
             <h3>Join Existing Session</h3>
           </div>
           <p className="card-description">
-            Enter the 10-digit session code shared with you
+            Enter the 6-character session code shared with you
           </p>
           <form onSubmit={handleJoinSubmit} className="join-form">
             <div className="input-group">
@@ -160,18 +160,18 @@ function SessionEntry({ onCreateSession, onJoinSession, loading, connected, sess
                 type="text"
                 value={joinCode}
                 onChange={handleJoinCodeChange}
-                placeholder="Enter 10-digit code"
-                maxLength={10}
+                placeholder="Enter code"
+                maxLength={6}
                 className="session-code-input"
                 disabled={!connected || loading}
               />
               <div className="input-hint">
-                {joinCode.length}/10 digits
+                {joinCode.length}/6 characters
               </div>
             </div>
             <button
               type="submit"
-              disabled={!connected || loading || joinCode.length !== 10}
+              disabled={!connected || loading || joinCode.length !== 6}
               className="btn btn-primary btn-large"
             >
               {loading && !isCreator ? (
