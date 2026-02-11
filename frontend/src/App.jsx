@@ -160,11 +160,12 @@ function App() {
     });
 
     newSocket.on('join-success', ({ sessionCode, users }) => {
-      console.log('Successfully joined session:', sessionCode);
+      console.log('✅ Successfully joined session:', sessionCode, 'Users:', users);
       setSessionCode(sessionCode);
       setUserCount(users);
       setLoading(false);
       setIsInChat(true); // Joining user goes directly to chat
+      console.log('Switched to chat room');
       
       // Add contact for joined session
       const now = new Date();
@@ -309,9 +310,10 @@ function App() {
       return;
     }
     
+    console.log('Attempting to join session:', code);
     setLoading(true);
     setError('');
-    // Optimistically set session code so UI switches to chat room
+    // Store the code we're trying to join (don't switch UI yet)
     setSessionCode(code);
     socket.emit('join-session', { sessionCode: code });
   };

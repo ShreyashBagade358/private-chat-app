@@ -127,13 +127,18 @@ io.on('connection', (socket) => {
     
     socket.emit('session-created', { sessionCode });
     console.log(`Session ${sessionCode} created by ${socket.id}`);
+    console.log(`Active sessions: ${Array.from(sessions.keys())}`);
   });
   
   // Join existing session
   socket.on('join-session', ({ sessionCode }) => {
+    console.log(`User ${socket.id} attempting to join session: ${sessionCode}`);
+    console.log(`Available sessions: ${Array.from(sessions.keys())}`);
+    
     const session = sessions.get(sessionCode);
     
     if (!session) {
+      console.log(`Session ${sessionCode} not found`);
       socket.emit('join-error', { message: 'Session not found. Please check the code.' });
       return;
     }
