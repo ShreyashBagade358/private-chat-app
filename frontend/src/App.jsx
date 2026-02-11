@@ -48,6 +48,7 @@ function App() {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
   const [sessionCode, setSessionCode] = useState('');
+  const [createdSessionCode, setCreatedSessionCode] = useState('');
   const [messages, setMessages] = useState([]);
   const [userCount, setUserCount] = useState(1);
   const [error, setError] = useState('');
@@ -58,8 +59,20 @@ function App() {
   const [contacts, setContacts] = useState([
     { id: 1, name: 'User Name', lastMessage: 'Last message preview text...', lastMessageTime: '10:30 AM', isOnline: true, unreadCount: 0 },
   ]);
+  const [isInChat, setIsInChat] = useState(false);
   
   const typingTimeoutRef = useRef(null);
+  const createdSessionCodeRef = useRef('');
+  const isInChatRef = useRef(false);
+  
+  // Keep refs in sync with state for socket event handlers
+  useEffect(() => {
+    createdSessionCodeRef.current = createdSessionCode;
+  }, [createdSessionCode]);
+  
+  useEffect(() => {
+    isInChatRef.current = isInChat;
+  }, [isInChat]);
 
   // Initialize socket connection
   useEffect(() => {
@@ -110,11 +123,13 @@ function App() {
     // Session events
     newSocket.on('session-created', ({ sessionCode }) => {
       console.log('Session created:', sessionCode);
+      setCreatedSessionCode(sessionCode);
       setSessionCode(sessionCode);
       setUserCount(1);
       setMessages([]);
       setError('');
       setLoading(false);
+      setIsInChat(false); // Stay on entry page to show the code
       
       // Add contact for created session
       const now = new Date();
@@ -149,6 +164,7 @@ function App() {
       setSessionCode(sessionCode);
       setUserCount(users);
       setLoading(false);
+      setIsInChat(true); // Joining user goes directly to chat
       
       // Add contact for joined session
       const now = new Date();
@@ -173,6 +189,12 @@ function App() {
       setContacts(prev => prev.map(c => ({ ...c, isOnline: true, lastMessage: 'User joined the session' })));
       if (selectedContact) {
         setSelectedContact(prev => ({ ...prev, isOnline: true, lastMessage: 'User joined the session' }));
+      }
+      
+      // If this is the session creator and someone joined, enter the chat
+      // Use refs to get latest values (avoiding closure staleness)
+      if (newSocket.id !== socketId && createdSessionCodeRef.current && !isInChatRef.current) {
+        setIsInChat(true);
       }
       
       // Only show system message for the existing user (not the one who just joined)
@@ -377,20 +399,23 @@ function App() {
       socket.connect();
     }
     setSessionCode('');
+    setCreatedSessionCode('');
     setMessages([]);
     setUserCount(1);
     setError('');
+    setIsInChat(false);
   };
 
   return (
     <div className="app">
-      {!sessionCode ? (
+      {!isInChat ? (
         <div className="app-container">
           <SessionEntry
             onCreateSession={handleCreateSession}
             onJoinSession={handleJoinSession}
             loading={loading}
             connected={connected}
+            createdSessionCode={createdSessionCode}
           />
         </div>
       ) : (
