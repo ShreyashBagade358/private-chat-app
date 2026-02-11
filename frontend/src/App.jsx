@@ -50,11 +50,16 @@ function App() {
 
   // Refs for socket event handlers to access latest state
   const isCreatorRef = useRef(false);
+  const selectedContactRef = useRef(null);
   
-  // Keep ref in sync with state
+  // Keep refs in sync with state
   useEffect(() => {
     isCreatorRef.current = isCreator;
   }, [isCreator]);
+  
+  useEffect(() => {
+    selectedContactRef.current = selectedContact;
+  }, [selectedContact]);
 
   // Define handleLeaveSession first so useEffect can use it
   const handleLeaveSession = useCallback(() => {
@@ -166,7 +171,7 @@ function App() {
         lastMessage: 'User joined' 
       })));
       
-      if (selectedContact) {
+      if (selectedContactRef.current) {
         setSelectedContact(prev => ({ 
           ...prev, 
           isOnline: true, 
