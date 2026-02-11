@@ -124,12 +124,14 @@ function App() {
     newSocket.on('session-created', ({ sessionCode }) => {
       console.log('Session created:', sessionCode);
       setCreatedSessionCode(sessionCode);
+      createdSessionCodeRef.current = sessionCode; // Sync ref immediately
       setSessionCode(sessionCode);
       setUserCount(1);
       setMessages([]);
       setError('');
       setLoading(false);
       setIsInChat(false); // Stay on entry page to show the code
+      isInChatRef.current = false; // Sync ref immediately
       
       // Add contact for created session
       const now = new Date();
@@ -183,7 +185,9 @@ function App() {
     });
 
     newSocket.on('user-joined', ({ users, socketId }) => {
-      console.log('User joined. Total users:', users);
+      console.log('User joined event received. Total users:', users, 'Socket ID:', socketId, 'My ID:', newSocket.id);
+      console.log('Creator code ref:', createdSessionCodeRef.current, 'Is in chat ref:', isInChatRef.current);
+      
       setUserCount(users || 2);
       
       // Update contact to online
@@ -192,14 +196,22 @@ function App() {
         setSelectedContact(prev => ({ ...prev, isOnline: true, lastMessage: 'User joined the session' }));
       }
       
+      // Check if this is the session creator (not the one who just joined)
+      const isCreator = newSocket.id !== socketId;
+      const hasCreatedCode = !!createdSessionCodeRef.current;
+      const notInChatYet = !isInChatRef.current;
+      
+      console.log('Is creator:', isCreator, 'Has created code:', hasCreatedCode, 'Not in chat:', notInChatYet);
+      
       // If this is the session creator and someone joined, enter the chat
-      // Use refs to get latest values (avoiding closure staleness)
-      if (newSocket.id !== socketId && createdSessionCodeRef.current && !isInChatRef.current) {
+      if (isCreator && hasCreatedCode && notInChatYet) {
+        console.log('Creator entering chat room...');
         setIsInChat(true);
+        isInChatRef.current = true; // Update ref immediately
       }
       
       // Only show system message for the existing user (not the one who just joined)
-      if (newSocket.id !== socketId) {
+      if (isCreator) {
         setMessages(prev => [...prev, {
           type: 'system',
           text: 'User joined the session',
@@ -418,6 +430,11 @@ function App() {
             loading={loading}
             connected={connected}
             createdSessionCode={createdSessionCode}
+            onEnterChat={() => {
+              console.log('Manually entering chat room');
+              setIsInChat(true);
+              isInChatRef.current = true;
+            }}
           />
         </div>
       ) : (

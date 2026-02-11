@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import '../styles/SessionEntry.css';
 
-function SessionEntry({ onCreateSession, onJoinSession, loading, connected, createdSessionCode }) {
+function SessionEntry({ onCreateSession, onJoinSession, loading, connected, createdSessionCode, onEnterChat }) {
   const [joinCode, setJoinCode] = useState('');
   const [copied, setCopied] = useState(false);
 
@@ -61,6 +61,18 @@ function SessionEntry({ onCreateSession, onJoinSession, loading, connected, crea
               <span></span>
             </div>
           </div>
+
+          <button 
+            className="btn btn-primary btn-large enter-chat-btn"
+            onClick={onEnterChat}
+            style={{marginTop: '2rem'}}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            Enter Chat Room
+          </button>
 
           <div className="features-list" style={{marginTop: '2rem'}}>
             <div className="feature-item">

@@ -327,6 +327,15 @@
   margin-bottom: 16px;
 }
 
+.enter-chat-btn {
+  background: #10B981 !important;
+  margin-top: 2rem;
+}
+
+.enter-chat-btn:hover:not(:disabled) {
+  background: #059669 !important;
+}
+
 .loading-dots {
   display: flex;
   justify-content: center;
