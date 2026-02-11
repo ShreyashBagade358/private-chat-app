@@ -87,6 +87,11 @@ function ChatRoom({
   }, []);
   
   const endCall = useCallback(() => {
+    // Stop ringtone if playing
+    if (ringtoneRef.current) {
+      ringtoneRef.current.stop();
+    }
+    
     // Clear any pending timeouts
     if (callTimeoutRef.current) {
       clearTimeout(callTimeoutRef.current);
@@ -122,7 +127,16 @@ function ChatRoom({
     });
     
     socket.on('incoming-call', ({ offer, callType, from }) => {
+      // If already in a call, reject the new call
+      if (showCallInterface || incomingCall) {
+        socket.emit('reject-call');
+        return;
+      }
       setIncomingCall({ offer, callType, from });
+      // Play ringtone for incoming call
+      if (ringtoneRef.current) {
+        ringtoneRef.current.play();
+      }
     });
     
     socket.on('call-answered', async ({ answer }) => {
@@ -149,15 +163,21 @@ function ChatRoom({
       endCall();
     });
     
+    socket.on('call-rejected', () => {
+      alert('Call was declined');
+      endCall();
+    });
+    
     return () => {
       socket.off('user-typing');
       socket.off('incoming-call');
       socket.off('call-answered');
       socket.off('ice-candidate');
       socket.off('call-ended');
+      socket.off('call-rejected');
       endCall();
     };
-  }, [socket, endCall]);
+  }, [socket, endCall, showCallInterface, incomingCall]);
   
   const copySessionCode = () => {
     navigator.clipboard.writeText(sessionCode);
@@ -255,6 +275,11 @@ function ChatRoom({
   };
   
   const answerCall = async () => {
+    // Stop ringtone when answering
+    if (ringtoneRef.current) {
+      ringtoneRef.current.stop();
+    }
+    
     try {
       setCallType(incomingCall.callType);
       setCallStatus('ringing');
@@ -305,14 +330,6 @@ function ChatRoom({
         }
       };
       
-      peerConnection.current.oniceconnectionstatechange = () => {
-        console.log('ICE connection state:', peerConnection.current.iceConnectionState);
-        if (peerConnection.current.iceConnectionState === 'failed') {
-          console.error('ICE connection failed');
-          endCall();
-        }
-      };
-      
       await peerConnection.current.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
       
       const answer = await peerConnection.current.createAnswer();
@@ -329,8 +346,12 @@ function ChatRoom({
   };
   
   const declineCall = () => {
+    // Stop ringtone when declining
+    if (ringtoneRef.current) {
+      ringtoneRef.current.stop();
+    }
     setIncomingCall(null);
-    socket.emit('end-call');
+    socket.emit('reject-call');
   };
   
   const handleLeaveClick = () => {
@@ -425,6 +446,7 @@ function ChatRoom({
           localStream={localStream.current}
           remoteStream={remoteStream.current}
           onEndCall={endCall}
+          peerConnection={peerConnection.current}
         />
       )}
       

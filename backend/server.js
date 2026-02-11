@@ -281,6 +281,12 @@ io.on('connection', (socket) => {
     }
   });
   
+  socket.on('reject-call', () => {
+    if (socket.sessionCode) {
+      socket.to(socket.sessionCode).emit('call-rejected');
+    }
+  });
+  
   // Handle disconnection
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);

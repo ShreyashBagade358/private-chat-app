@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import '../styles/CallInterface.css';
 
-function CallInterface({ callType, localStream, remoteStream, onEndCall }) {
+function CallInterface({ callType, localStream, remoteStream, onEndCall, peerConnection }) {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
