@@ -12,13 +12,16 @@ function ChatRoom({
   onSendMessage, 
   onSendMedia, 
   onTyping,
-  onLeaveSession 
+  onLeaveSession,
+  selectedContact,
+  connected,
+  error,
+  onDismissError
 }) {
   const [isTyping, setIsTyping] = useState(false);
   const [showCallInterface, setShowCallInterface] = useState(false);
   const [callType, setCallType] = useState(null); // 'audio' or 'video'
   const [incomingCall, setIncomingCall] = useState(null);
-  const [copied, setCopied] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [callStatus, setCallStatus] = useState('idle'); // 'idle', 'calling', 'ringing', 'connected'
   
@@ -178,12 +181,6 @@ function ChatRoom({
       endCall();
     };
   }, [socket, endCall, showCallInterface, incomingCall]);
-  
-  const copySessionCode = () => {
-    navigator.clipboard.writeText(sessionCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
   
   const initializeCall = async (type) => {
     try {
@@ -372,32 +369,35 @@ function ChatRoom({
   
   return (
     <div className="chat-room">
+      {error && (
+        <div className="chat-error-banner">
+          <div className="chat-error-content">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+            <span>{error}</span>
+            <button onClick={onDismissError} className="error-close">×</button>
+          </div>
+        </div>
+      )}
+      
       <div className="chat-header">
         <div className="header-left">
-          <div className="session-info">
-            <div className="session-code-display">
-              <span className="code-label">Session Code:</span>
-              <code className="code-value">{sessionCode}</code>
-              <button 
-                className={`copy-btn ${copied ? 'copied' : ''}`}
-                onClick={copySessionCode}
-                title="Copy code"
-              >
-                {copied ? (
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeWidth="2"/>
-                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" strokeWidth="2"/>
-                  </svg>
-                )}
-              </button>
+          <div className="user-info">
+            <div className="user-avatar-large">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+              {selectedContact?.isOnline && <span className="online-indicator-large"></span>}
             </div>
-            <div className="user-status">
-              <div className={`status-indicator ${userCount === 2 ? 'active' : 'waiting'}`}></div>
-              <span>{userCount === 2 ? 'Both users online' : 'Waiting for user...'}</span>
+            <div className="user-details">
+              <span className="user-name">{selectedContact?.name || 'Chat Partner'}</span>
+              <span className="user-status-text">
+                {connected 
+                  ? (userCount === 2 ? 'Online' : 'Waiting for user...')
+                  : 'Connecting...'
+                }
+              </span>
             </div>
           </div>
         </div>

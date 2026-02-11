@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import ChatRoom from './components/ChatRoom';
 import SessionEntry from './components/SessionEntry';
+import Sidebar from './components/Sidebar';
+import ContactList from './components/ContactList';
 import './styles/App.css';
 
 // ✅ CRITICAL: Use environment variable for backend URL
@@ -50,6 +52,12 @@ function App() {
   const [userCount, setUserCount] = useState(1);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('chat');
+  const [selectedContact, setSelectedContact] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [contacts, setContacts] = useState([
+    { id: 1, name: 'User Name', lastMessage: 'Last message preview text...', lastMessageTime: '10:30 AM', isOnline: true, unreadCount: 0 },
+  ]);
   
   const typingTimeoutRef = useRef(null);
 
@@ -107,6 +115,26 @@ function App() {
       setMessages([]);
       setError('');
       setLoading(false);
+      
+      // Add contact for created session
+      const now = new Date();
+      const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      setContacts([{
+        id: sessionCode,
+        name: 'Chat Partner',
+        lastMessage: 'Waiting for partner...',
+        lastMessageTime: timeString,
+        isOnline: false,
+        unreadCount: 0
+      }]);
+      setSelectedContact({
+        id: sessionCode,
+        name: 'Chat Partner',
+        lastMessage: 'Waiting for partner...',
+        lastMessageTime: timeString,
+        isOnline: false,
+        unreadCount: 0
+      });
     });
 
     newSocket.on('join-error', ({ message }) => {
@@ -121,11 +149,32 @@ function App() {
       setSessionCode(sessionCode);
       setUserCount(users);
       setLoading(false);
+      
+      // Add contact for joined session
+      const now = new Date();
+      const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const newContact = {
+        id: sessionCode,
+        name: 'Chat Partner',
+        lastMessage: 'Session joined',
+        lastMessageTime: timeString,
+        isOnline: true,
+        unreadCount: 0
+      };
+      setContacts([newContact]);
+      setSelectedContact(newContact);
     });
 
     newSocket.on('user-joined', ({ users, socketId }) => {
       console.log('User joined. Total users:', users);
       setUserCount(users || 2);
+      
+      // Update contact to online
+      setContacts(prev => prev.map(c => ({ ...c, isOnline: true, lastMessage: 'User joined the session' })));
+      if (selectedContact) {
+        setSelectedContact(prev => ({ ...prev, isOnline: true, lastMessage: 'User joined the session' }));
+      }
+      
       // Only show system message for the existing user (not the one who just joined)
       if (newSocket.id !== socketId) {
         setMessages(prev => [...prev, {
@@ -139,6 +188,13 @@ function App() {
     newSocket.on('user-left', () => {
       console.log('User left the session');
       setUserCount(prev => Math.max(1, prev - 1));
+      
+      // Update contact to offline
+      setContacts(prev => prev.map(c => ({ ...c, isOnline: false, lastMessage: 'User left the session' })));
+      if (selectedContact) {
+        setSelectedContact(prev => ({ ...prev, isOnline: false, lastMessage: 'User left the session' }));
+      }
+      
       setMessages(prev => [...prev, {
         type: 'system',
         text: 'User left the session',
@@ -156,6 +212,22 @@ function App() {
         sender,
         timestamp
       }]);
+      
+      // Update contact's last message
+      const now = new Date(timestamp);
+      const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      setContacts(prev => prev.map(c => ({ 
+        ...c, 
+        lastMessage: message.length > 30 ? message.substring(0, 30) + '...' : message,
+        lastMessageTime: timeString
+      })));
+      if (selectedContact) {
+        setSelectedContact(prev => ({ 
+          ...prev, 
+          lastMessage: message.length > 30 ? message.substring(0, 30) + '...' : message,
+          lastMessageTime: timeString
+        }));
+      }
     });
 
     // Media events
@@ -189,7 +261,7 @@ function App() {
       console.log('Cleaning up socket connection...');
       newSocket.close();
     };
-  }, []);
+  }, [selectedContact]);
 
   // Create new session
   const handleCreateSession = () => {
@@ -230,12 +302,29 @@ function App() {
     socket.emit('send-message', { message });
     
     // Add to own messages
+    const timestamp = Date.now();
     setMessages(prev => [...prev, {
       type: 'text',
       text: message,
       isMine: true,
-      timestamp: Date.now()
+      timestamp
     }]);
+    
+    // Update contact's last message
+    const now = new Date(timestamp);
+    const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    setContacts(prev => prev.map(c => ({ 
+      ...c, 
+      lastMessage: message.length > 30 ? message.substring(0, 30) + '...' : message,
+      lastMessageTime: timeString
+    })));
+    if (selectedContact) {
+      setSelectedContact(prev => ({ 
+        ...prev, 
+        lastMessage: message.length > 30 ? message.substring(0, 30) + '...' : message,
+        lastMessageTime: timeString
+      }));
+    }
   };
 
     // Send media (images, videos, files)
@@ -295,44 +384,25 @@ function App() {
 
   return (
     <div className="app">
-      <div className="app-header">
-        <h1>🔒 Private Chat App</h1>
-        <div className="connection-status">
-          {connected ? (
-            <span className="status-badge status-connected">
-              <span className="status-dot"></span>
-              Connected
-            </span>
-          ) : (
-            <span className="status-badge status-disconnected">
-              <span className="status-dot"></span>
-              Connecting...
-            </span>
-          )}
-        </div>
-      </div>
-
-      {error && (
-        <div className="error-banner">
-          <div className="error-content">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-            </svg>
-            <span>{error}</span>
-            <button onClick={() => setError('')} className="error-close">×</button>
-          </div>
-        </div>
-      )}
-
-      <div className="app-container">
-        {!sessionCode ? (
+      {!sessionCode ? (
+        <div className="app-container">
           <SessionEntry
             onCreateSession={handleCreateSession}
             onJoinSession={handleJoinSession}
             loading={loading}
             connected={connected}
           />
-        ) : (
+        </div>
+      ) : (
+        <div className="main-layout">
+          <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+          <ContactList 
+            contacts={contacts}
+            selectedContact={selectedContact}
+            onSelectContact={setSelectedContact}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
           <ChatRoom
             socket={socket}
             sessionCode={sessionCode}
@@ -342,16 +412,13 @@ function App() {
             onSendMedia={handleSendMedia}
             onTyping={handleTyping}
             onLeaveSession={handleLeaveSession}
+            selectedContact={selectedContact}
+            connected={connected}
+            error={error}
+            onDismissError={() => setError('')}
           />
-        )}
-      </div>
-
-      <div className="app-footer">
-        <p>🔐 End-to-end encrypted • Messages are not stored</p>
-        {process.env.NODE_ENV === 'development' && (
-          <p className="dev-info">Backend: {BACKEND_URL}</p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
