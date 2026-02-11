@@ -6,13 +6,14 @@ const cors = require('cors');
 const app = express();
 const server = http.createServer(app);
 
-// CORS Configuration
+// CORS Configuration - Allow all origins for now
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'http://192.168.43.131:3000',
   'https://private-chat-app-iota.vercel.app',
   'https://private-chat-app.vercel.app',
+  'https://private-chat-app-shreyashbagade358.vercel.app',
   process.env.FRONTEND_URL || '',
 ].filter(Boolean);
 
@@ -20,15 +21,7 @@ console.log('📋 Allowed CORS origins:', allowedOrigins);
 
 const io = socketIO(server, {
   cors: {
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        console.log('Blocked origin:', origin);
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
+    origin: '*', // Allow all origins for WebSocket
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -39,14 +32,7 @@ const io = socketIO(server, {
 });
 
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: '*', // Allow all origins
   credentials: true
 }));
 
@@ -266,5 +252,12 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('='.repeat(50));
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🌐 CORS: Allowing all origins`);
   console.log('='.repeat(50));
+});
+
+// Log all incoming connections
+io.use((socket, next) => {
+  console.log(`🔌 New connection attempt from: ${socket.handshake.headers.origin || 'unknown'}`);
+  next();
 });
