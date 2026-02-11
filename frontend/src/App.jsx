@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import io from 'socket.io-client';
 import ChatRoom from './components/ChatRoom';
 import SessionEntry from './components/SessionEntry';
@@ -47,6 +47,30 @@ function App() {
   const [selectedContact, setSelectedContact] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [contacts, setContacts] = useState([]);
+
+  // Refs for socket event handlers to access latest state
+  const isCreatorRef = useRef(false);
+  
+  // Keep ref in sync with state
+  useEffect(() => {
+    isCreatorRef.current = isCreator;
+  }, [isCreator]);
+
+  // Define handleLeaveSession first so useEffect can use it
+  const handleLeaveSession = useCallback(() => {
+    if (socket) {
+      socket.disconnect();
+      socket.connect();
+    }
+    setSessionCode('');
+    setIsCreator(false);
+    setInChat(false);
+    setMessages([]);
+    setUserCount(1);
+    setError('');
+    setContacts([]);
+    setSelectedContact(null);
+  }, [socket]);
 
   // Initialize socket
   useEffect(() => {
@@ -151,7 +175,7 @@ function App() {
       }
       
       // If I'm the creator and someone joined, go to chat
-      if (isCreator && socketId !== newSocket.id) {
+      if (isCreatorRef.current && socketId !== newSocket.id) {
         console.log('🚀 Creator entering chat...');
         setInChat(true);
       }
@@ -216,12 +240,7 @@ function App() {
     return () => {
       newSocket.close();
     };
-  }, []);
-
-  // Track isCreator changes for the socket event handler
-  useEffect(() => {
-    // This effect runs when isCreator changes
-  }, [isCreator]);
+  }, [handleLeaveSession]);
 
   const handleCreateSession = () => {
     if (!socket || !connected) {
@@ -282,21 +301,6 @@ function App() {
   const handleTyping = (isTyping) => {
     if (!socket || !sessionCode) return;
     socket.emit('typing', { isTyping });
-  };
-
-  const handleLeaveSession = () => {
-    if (socket) {
-      socket.disconnect();
-      socket.connect();
-    }
-    setSessionCode('');
-    setIsCreator(false);
-    setInChat(false);
-    setMessages([]);
-    setUserCount(1);
-    setError('');
-    setContacts([]);
-    setSelectedContact(null);
   };
 
   return (
