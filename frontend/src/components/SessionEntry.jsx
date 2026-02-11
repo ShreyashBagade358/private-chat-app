@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import '../styles/SessionEntry.css';
 
-function SessionEntry({ onCreateSession, onJoinSession, loading, connected, createdSessionCode, onEnterChat }) {
+function SessionEntry({ onCreateSession, onJoinSession, loading, connected, sessionCode, isCreator, onEnterChat }) {
   const [joinCode, setJoinCode] = useState('');
   const [copied, setCopied] = useState(false);
 
@@ -11,29 +11,29 @@ function SessionEntry({ onCreateSession, onJoinSession, loading, connected, crea
   };
 
   const handleCopyCode = () => {
-    if (createdSessionCode) {
-      navigator.clipboard.writeText(createdSessionCode);
+    if (sessionCode) {
+      navigator.clipboard.writeText(sessionCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
   const handleJoinCodeChange = (e) => {
-    // Only allow numbers and limit to 10 digits
     const value = e.target.value.replace(/\D/g, '').slice(0, 10);
     setJoinCode(value);
   };
 
-  return (
-    <div className="session-entry">
-      {createdSessionCode ? (
+  // Show "session created" view for creator
+  if (isCreator && sessionCode) {
+    return (
+      <div className="session-entry">
         <div className="session-created-view">
           <div className="welcome-icon">🔒</div>
           <h2>Session Created!</h2>
           <p className="session-code-label">Share this code with your chat partner:</p>
           
           <div className="session-code-display">
-            <code className="session-code">{createdSessionCode}</code>
+            <code className="session-code">{sessionCode}</code>
             <button 
               className="copy-btn"
               onClick={handleCopyCode}
@@ -65,7 +65,6 @@ function SessionEntry({ onCreateSession, onJoinSession, loading, connected, crea
           <button 
             className="btn btn-primary btn-large enter-chat-btn"
             onClick={onEnterChat}
-            style={{marginTop: '2rem'}}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
@@ -89,15 +88,20 @@ function SessionEntry({ onCreateSession, onJoinSession, loading, connected, crea
             </div>
           </div>
         </div>
-      ) : (
-        <>
-          <div className="session-welcome">
-            <div className="welcome-icon">🔒</div>
-            <h2>Welcome to Private Chat</h2>
-            <p>Create a new session or join an existing one to start chatting securely</p>
-          </div>
+      </div>
+    );
+  }
 
-          <div className="session-options">
+  // Default entry view
+  return (
+    <div className="session-entry">
+      <div className="session-welcome">
+        <div className="welcome-icon">🔒</div>
+        <h2>Welcome to Private Chat</h2>
+        <p>Create a new session or join an existing one to start chatting securely</p>
+      </div>
+
+      <div className="session-options">
         <div className="option-card">
           <div className="card-header">
             <div className="card-icon create-icon">
@@ -116,7 +120,7 @@ function SessionEntry({ onCreateSession, onJoinSession, loading, connected, crea
             disabled={!connected || loading}
             className="btn btn-primary btn-large"
           >
-            {loading ? (
+            {loading && isCreator ? (
               <>
                 <span className="spinner"></span>
                 Creating...
@@ -170,7 +174,7 @@ function SessionEntry({ onCreateSession, onJoinSession, loading, connected, crea
               disabled={!connected || loading || joinCode.length !== 10}
               className="btn btn-primary btn-large"
             >
-              {loading ? (
+              {loading && !isCreator ? (
                 <>
                   <span className="spinner"></span>
                   Joining...
@@ -218,8 +222,6 @@ function SessionEntry({ onCreateSession, onJoinSession, loading, connected, crea
           <span>Text, media & voice/video calls</span>
         </div>
       </div>
-        </>
-      )}
     </div>
   );
 }

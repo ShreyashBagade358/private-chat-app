@@ -6,7 +6,7 @@ const cors = require('cors');
 const app = express();
 const server = http.createServer(app);
 
-// ✅ CORS Configuration - Add your Vercel URL here after deployment
+// CORS Configuration
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
@@ -14,19 +14,14 @@ const allowedOrigins = [
   'https://private-chat-app-iota.vercel.app',
   'https://private-chat-app.vercel.app',
   process.env.FRONTEND_URL || '',
-  process.env.REACT_APP_BACKEND_URL || '',
 ].filter(Boolean);
 
-// Log allowed origins for debugging
 console.log('📋 Allowed CORS origins:', allowedOrigins);
 
-// Socket.io configuration
 const io = socketIO(server, {
   cors: {
     origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps, Postman, etc.)
       if (!origin) return callback(null, true);
-      
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
@@ -37,21 +32,15 @@ const io = socketIO(server, {
     methods: ["GET", "POST"],
     credentials: true
   },
-  maxHttpBufferSize: 50e6, // 50MB for media files
+  maxHttpBufferSize: 50e6,
   pingTimeout: 60000,
   pingInterval: 25000,
-  transports: ['websocket', 'polling'], // ✅ Support both for better compatibility
-  allowEIO3: true, // ✅ Allow Engine.IO v3 clients (backward compatibility)
-  perMessageDeflate: {
-    threshold: 1024 // Compress messages larger than 1KB
-  }
+  transports: ['websocket', 'polling'],
 });
 
-// Express CORS middleware
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -63,7 +52,7 @@ app.use(cors({
 
 app.use(express.json());
 
-// Health check endpoints for deployment platforms
+// Health check
 app.get('/', (req, res) => {
   res.status(200).json({ 
     status: 'ok', 
@@ -77,15 +66,12 @@ app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'healthy',
     uptime: process.uptime(),
-    memory: process.memoryUsage()
+    activeSessions: sessions.size
   });
 });
 
 // Store active sessions
 const sessions = new Map();
-// Format: { sessionCode: { users: [socketId1, socketId2], createdAt: timestamp, lastActivity: timestamp } }
-
-// Session configuration
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 const MAX_USERS_PER_SESSION = 2;
 
@@ -99,17 +85,15 @@ setInterval(() => {
   const now = Date.now();
   for (const [code, session] of sessions.entries()) {
     if (now - session.lastActivity > SESSION_TIMEOUT) {
-      // Notify users about session expiry
       session.users.forEach(socketId => {
         io.to(socketId).emit('session-expired');
       });
       sessions.delete(code);
-      console.log(`Session ${code} expired due to inactivity`);
+      console.log(`Session ${code} expired`);
     }
   }
-}, 60000); // Check every minute
+}, 60000);
 
-// Socket.io connection handling
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
   
@@ -126,25 +110,25 @@ io.on('connection', (socket) => {
     socket.sessionCode = sessionCode;
     
     socket.emit('session-created', { sessionCode });
-    console.log(`Session ${sessionCode} created by ${socket.id}`);
-    console.log(`Active sessions: ${Array.from(sessions.keys())}`);
+    console.log(`✅ Session ${sessionCode} created by ${socket.id}`);
   });
   
   // Join existing session
   socket.on('join-session', ({ sessionCode }) => {
-    console.log(`User ${socket.id} attempting to join session: ${sessionCode}`);
-    console.log(`Available sessions: ${Array.from(sessions.keys())}`);
+    console.log(`📝 User ${socket.id} trying to join: ${sessionCode}`);
+    console.log(`📋 Active sessions:`, Array.from(sessions.keys()));
     
     const session = sessions.get(sessionCode);
     
     if (!session) {
-      console.log(`Session ${sessionCode} not found`);
-      socket.emit('join-error', { message: 'Session not found. Please check the code.' });
+      console.log(`❌ Session ${sessionCode} not found`);
+      socket.emit('join-error', { message: 'Session not found' });
       return;
     }
     
     if (session.users.length >= MAX_USERS_PER_SESSION) {
-      socket.emit('join-error', { message: 'Session is full. Maximum 2 users allowed.' });
+      console.log(`❌ Session ${sessionCode} is full`);
+      socket.emit('join-error', { message: 'Session is full' });
       return;
     }
     
@@ -154,7 +138,7 @@ io.on('connection', (socket) => {
     socket.join(sessionCode);
     socket.sessionCode = sessionCode;
     
-    // Notify both users that they're connected
+    // Notify ALL users in session (including creator)
     io.to(sessionCode).emit('user-joined', { 
       users: session.users.length,
       socketId: socket.id
@@ -166,51 +150,37 @@ io.on('connection', (socket) => {
       users: session.users.length 
     });
     
-    console.log(`User ${socket.id} joined session ${sessionCode}`);
+    console.log(`✅ User ${socket.id} joined session ${sessionCode}`);
   });
   
-  // Handle text messages
+  // Handle messages
   socket.on('send-message', ({ message }) => {
-    console.log(`Message received from ${socket.id} in session ${socket.sessionCode}:`, message);
     if (socket.sessionCode) {
       const session = sessions.get(socket.sessionCode);
       if (session) {
         session.lastActivity = Date.now();
-        console.log(`Broadcasting message to session ${socket.sessionCode}, users in session:`, session.users);
         socket.to(socket.sessionCode).emit('receive-message', {
           message,
           sender: socket.id,
           timestamp: Date.now()
         });
-        console.log(`Message broadcasted to room ${socket.sessionCode}`);
-      } else {
-        console.log(`Session ${socket.sessionCode} not found`);
       }
-    } else {
-      console.log(`Socket ${socket.id} has no sessionCode`);
     }
   });
   
-  // Handle typing indicator
+  // Handle typing
   socket.on('typing', ({ isTyping }) => {
     if (socket.sessionCode) {
-      socket.to(socket.sessionCode).emit('user-typing', { 
-        isTyping,
-        socketId: socket.id
-      });
+      socket.to(socket.sessionCode).emit('user-typing', { isTyping });
     }
   });
   
-  // Handle media sharing (images, videos, audio, documents)
+  // Handle media
   socket.on('send-media', ({ mediaData, mediaType, fileName, fileSize }) => {
-    console.log(`Media upload from ${socket.id} in session ${socket.sessionCode}:`, fileName, `(${formatFileSize(fileSize)})`);
-    
     if (socket.sessionCode) {
       const session = sessions.get(socket.sessionCode);
       if (session) {
         session.lastActivity = Date.now();
-        
-        // Broadcast to other user in session
         socket.to(socket.sessionCode).emit('receive-media', {
           mediaData,
           mediaType,
@@ -219,38 +189,18 @@ io.on('connection', (socket) => {
           sender: socket.id,
           timestamp: Date.now()
         });
-        
-        console.log(`Media broadcasted to session ${socket.sessionCode}`);
-      } else {
-        console.log(`Session ${socket.sessionCode} not found for media upload`);
       }
-    } else {
-      console.log(`Socket ${socket.id} has no session code for media upload`);
     }
   });
-
-  // Helper function to format file size
-  function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  }
   
-  // WebRTC signaling for voice/video calls
+  // WebRTC signaling
   socket.on('call-user', ({ offer, callType }) => {
     if (socket.sessionCode) {
       const session = sessions.get(socket.sessionCode);
       if (session) {
-        session.lastActivity = Date.now();
         const otherUser = session.users.find(id => id !== socket.id);
         if (otherUser) {
-          io.to(otherUser).emit('incoming-call', {
-            offer,
-            callType,
-            from: socket.id
-          });
+          io.to(otherUser).emit('incoming-call', { offer, callType, from: socket.id });
         }
       }
     }
@@ -292,7 +242,7 @@ io.on('connection', (socket) => {
     }
   });
   
-  // Handle disconnection
+  // Handle disconnect
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
     
@@ -300,69 +250,21 @@ io.on('connection', (socket) => {
       const session = sessions.get(socket.sessionCode);
       if (session) {
         session.users = session.users.filter(id => id !== socket.id);
-        
-        // Notify other user
         socket.to(socket.sessionCode).emit('user-left');
         
-        // Delete session if empty
         if (session.users.length === 0) {
           sessions.delete(socket.sessionCode);
-          console.log(`Session ${socket.sessionCode} destroyed - no users remaining`);
+          console.log(`Session ${socket.sessionCode} deleted`);
         }
       }
     }
   });
-  
-  // Handle errors
-  socket.on('error', (error) => {
-    console.error('Socket error:', error);
-  });
 });
 
-// Error handling for server
-server.on('error', (err) => {
-  console.error('Server error:', err);
-  if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use`);
-  }
-  process.exit(1);
-});
-
-// Start server
 const PORT = process.env.PORT || 8000;
-
 server.listen(PORT, '0.0.0.0', () => {
   console.log('='.repeat(50));
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 Allowed origins:`, allowedOrigins);
   console.log('='.repeat(50));
-});
-
-// Handle graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
-  server.close(() => {
-    console.log('HTTP server closed');
-    process.exit(0);
-  });
-});
-
-process.on('SIGINT', () => {
-  console.log('SIGINT signal received: closing HTTP server');
-  server.close(() => {
-    console.log('HTTP server closed');
-    process.exit(0);
-  });
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
 });
