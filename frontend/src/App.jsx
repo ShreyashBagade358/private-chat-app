@@ -54,6 +54,7 @@ function App() {
   const isCreatorRef = useRef(false);
   const selectedContactRef = useRef(null);
   const sessionCodeRef = useRef('');
+  const socketRef = useRef(null);
   
   // Keep refs in sync with state
   useEffect(() => {
@@ -68,15 +69,20 @@ function App() {
     sessionCodeRef.current = sessionCode;
   }, [sessionCode]);
 
+  useEffect(() => {
+    socketRef.current = socket;
+  }, [socket]);
+
   // Define handleLeaveSession first so useEffect can use it
   const handleLeaveSession = useCallback(() => {
+    const currentSocket = socketRef.current;
     const currentSessionCode = sessionCodeRef.current;
-    if (socket && currentSessionCode) {
-      socket.emit('leave-session');
+    if (currentSocket && currentSessionCode) {
+      currentSocket.emit('leave-session');
     }
-    if (socket) {
-      socket.disconnect();
-      socket.connect();
+    if (currentSocket) {
+      currentSocket.disconnect();
+      currentSocket.connect();
     }
     setSessionCode('');
     setIsCreator(false);
@@ -86,7 +92,7 @@ function App() {
     setError('');
     setContacts([]);
     setSelectedContact(null);
-  }, [socket]);
+  }, []);
 
   // Initialize socket
   useEffect(() => {
@@ -263,7 +269,7 @@ function App() {
     return () => {
       newSocket.close();
     };
-  }, []);
+  }, [handleLeaveSession]);
 
   const handleCreateSession = () => {
     if (!socket || !connected) {
