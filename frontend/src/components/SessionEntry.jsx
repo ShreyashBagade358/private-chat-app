@@ -28,7 +28,7 @@ function SessionEntry({ onCreateSession, onJoinSession, loading, connected, sess
     return (
       <div className="session-entry">
         <div className="session-created-view">
-          <div className="welcome-icon">🔒</div>
+          <div className="welcome-icon">🤫</div>
           <h2>Session Created!</h2>
           <p className="session-code-label">Share this code with your chat partner:</p>
           
@@ -96,9 +96,9 @@ function SessionEntry({ onCreateSession, onJoinSession, loading, connected, sess
   return (
     <div className="session-entry">
       <div className="session-welcome">
-        <div className="welcome-icon">🔒</div>
-        <h2>Welcome to Private Chat</h2>
-        <p>Create a new session or join an existing one to start chatting securely</p>
+        <div className="welcome-icon">🤫</div>
+        <h2>Welcome to Gauessip</h2>
+        <p>Shhh... Create a private session or join one to chat silently</p>
       </div>
 
       <div className="session-options">

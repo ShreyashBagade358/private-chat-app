@@ -118,6 +118,34 @@
   font-size: 13px;
 }
 
+.user-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.session-code-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(91, 127, 255, 0.15);
+  color: #5B7FFF;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(91, 127, 255, 0.3);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.5px;
+}
+
+.session-code-badge svg {
+  width: 10px;
+  height: 10px;
+  opacity: 0.8;
+}
+
 .header-right {
   display: flex;
   gap: 12px;
@@ -344,6 +372,20 @@
 
   .user-status-text {
     font-size: 12px;
+  }
+
+  .user-status-row {
+    gap: 6px;
+  }
+
+  .session-code-badge {
+    font-size: 10px;
+    padding: 1px 6px;
+  }
+
+  .session-code-badge svg {
+    width: 9px;
+    height: 9px;
   }
 
   .icon-btn {
