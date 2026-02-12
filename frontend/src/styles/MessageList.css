@@ -312,7 +312,8 @@
 
 @media (max-width: 768px) {
   .message-list {
-    padding: 1.5rem 1rem;
+    padding: 16px;
+    gap: 12px;
   }
 
   .message {
@@ -320,6 +321,122 @@
   }
 
   .message-content {
-    padding: 0.875rem 1rem;
+    padding: 12px 16px;
+    font-size: 15px;
+    border-radius: 16px;
+  }
+
+  .message-time {
+    font-size: 11px;
+  }
+
+  .empty-state {
+    padding: 20px;
+  }
+
+  .empty-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+  }
+
+  .empty-icon svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .empty-state h3 {
+    font-size: 16px;
+  }
+
+  .empty-state p {
+    font-size: 13px;
+  }
+
+  .system-message {
+    padding: 6px 14px;
+    font-size: 11px;
+    margin: 6px 0;
+  }
+
+  .image-container img,
+  .video-container video {
+    max-width: 240px;
+    max-height: 180px;
+  }
+
+  .audio-container {
+    min-width: 200px;
+    padding: 10px;
+  }
+
+  .file-container {
+    max-width: 240px;
+    padding: 10px;
+  }
+
+  .file-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .file-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .file-name {
+    font-size: 12px;
+  }
+
+  .file-size {
+    font-size: 11px;
+  }
+
+  .download-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .typing-indicator {
+    padding: 12px 16px;
+  }
+
+  .typing-indicator span {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+@media (max-width: 640px) {
+  .message-list {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .message {
+    max-width: 90%;
+  }
+
+  .message-content {
+    padding: 10px 14px;
+    font-size: 14px;
+    border-radius: 14px;
+  }
+
+  .image-container img,
+  .video-container video {
+    max-width: 200px;
+    max-height: 150px;
+  }
+
+  .audio-container {
+    min-width: 180px;
+  }
+
+  .file-container {
+    max-width: 200px;
   }
 }

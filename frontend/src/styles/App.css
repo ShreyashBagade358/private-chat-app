@@ -129,14 +129,41 @@ input, textarea {
   min-height: 100vh;
 }
 
-/* Responsive */
+/* Mobile Responsive Styles */
 @media (max-width: 768px) {
   .app-container {
-    padding: 16px;
+    padding: 12px;
   }
   
   .main-layout {
     flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    position: relative;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-container {
+    padding: 8px;
+  }
+  
+  .main-layout {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+
+/* Touch-friendly improvements */
+@media (pointer: coarse) {
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  input, textarea {
+    font-size: 16px;
   }
 }
 
