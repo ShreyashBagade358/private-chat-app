@@ -98,176 +98,160 @@ function App() {
   useEffect(() => {
     console.log('Connecting to:', BACKEND_URL);
     
-    const newSocket = io(BACKEND_URL, {
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: 5,
-    });
-
-    newSocket.on('connect', () => {
-      console.log('✅ Connected:', newSocket.id);
-      setConnected(true);
-      setError('');
-    });
-
-    newSocket.on('connect_error', (err) => {
-      console.error('❌ Connection error:', err.message);
-      setConnected(false);
-      setError('Cannot connect to server');
-    });
-
-    newSocket.on('disconnect', () => {
-      console.log('⚠️ Disconnected');
-      setConnected(false);
-    });
-
-    // Session created (User 1)
-    newSocket.on('session-created', ({ sessionCode }) => {
-      console.log('✅ Session created:', sessionCode);
-      setSessionCode(sessionCode);
-      setIsCreator(true);
-      setInChat(false); // Stay on entry page
-      setUserCount(1);
-      setMessages([]);
-      setError('');
-      setLoading(false);
-      
-      // Setup contact
-      const timeString = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-      const contact = {
-        id: sessionCode,
-        name: 'Chat Partner',
-        lastMessage: 'Waiting for partner...',
-        lastMessageTime: timeString,
-        isOnline: false,
-        unreadCount: 0
-      };
-      setContacts([contact]);
-      setSelectedContact(contact);
-    });
-
-    // Join success (User 2)
-    newSocket.on('join-success', ({ sessionCode, users }) => {
-      console.log('✅ Joined session:', sessionCode, 'Users:', users);
-      setSessionCode(sessionCode);
-      setIsCreator(false);
-      setInChat(true); // Go to chat immediately
-      setUserCount(users);
-      setLoading(false);
-      
-      const timeString = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-      const contact = {
-        id: sessionCode,
-        name: 'Chat Partner',
-        lastMessage: 'Connected',
-        lastMessageTime: timeString,
-        isOnline: true,
-        unreadCount: 0
-      };
-      setContacts([contact]);
-      setSelectedContact(contact);
-    });
-
-    // Join error
-    newSocket.on('join-error', ({ message }) => {
-      console.error('❌ Join error:', message);
-      setError(message);
-      setSessionCode('');
-      setLoading(false);
-    });
-
-    // Session error (creation failed)
-    newSocket.on('session-error', ({ message }) => {
-      console.error('❌ Session error:', message);
-      setError(message);
-      setLoading(false);
-    });
-
-    // User joined (both users receive this)
-    newSocket.on('user-joined', ({ users, socketId }) => {
-      console.log('👤 User joined. Total:', users, 'Socket:', socketId);
-      setUserCount(users);
-      
-      // Update contact status
-      setContacts(prev => prev.map(c => ({ 
-        ...c, 
-        isOnline: true, 
-        lastMessage: 'User joined' 
-      })));
-      
-      if (selectedContactRef.current) {
-        setSelectedContact(prev => ({ 
-          ...prev, 
-          isOnline: true, 
-          lastMessage: 'User joined' 
-        }));
+    const wakeServer = async () => {
+      try {
+        await fetch(BACKEND_URL + '/health', { mode: 'cors' });
+      } catch (e) {
+        // Server might be sleeping, continue anyway
       }
-      
-      // If I'm the creator and someone joined, go to chat
-      if (isCreatorRef.current && socketId !== newSocket.id) {
-        console.log('🚀 Creator entering chat...');
+    };
+    
+    wakeServer();
+    
+    const connectTimeout = setTimeout(() => {
+      const newSocket = io(BACKEND_URL, {
+        transports: ['polling'],
+        reconnection: true,
+        reconnectionAttempts: 5,
+      });
+
+      newSocket.on('connect', () => {
+        console.log('✅ Connected:', newSocket.id);
+        setConnected(true);
+        setError('');
+      });
+
+      newSocket.on('connect_error', (err) => {
+        console.error('❌ Connection error:', err.message);
+        setConnected(false);
+        setError('Cannot connect to server');
+      });
+
+      newSocket.on('disconnect', () => {
+        console.log('⚠️ Disconnected');
+        setConnected(false);
+      });
+
+      // Session created (User 1)
+      newSocket.on('session-created', ({ sessionCode }) => {
+        console.log('✅ Session created:', sessionCode);
+        setSessionCode(sessionCode);
+        setIsCreator(true);
+        setInChat(false); // Stay on entry page
+        setUserCount(1);
+        setMessages([]);
+        setError('');
+        setLoading(false);
+        
+        // Setup contact
+        const timeString = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        const contact = {
+          id: sessionCode,
+          name: 'Chat Partner',
+          lastMessage: 'Waiting for partner...',
+          lastMessageTime: timeString,
+          isOnline: false,
+          unreadCount: 0
+        };
+        setSelectedContact(contact);
+      });
+
+      // User joined (User 2)
+      newSocket.on('join-success', ({ sessionCode, users }) => {
+        console.log('✅ Joined session:', sessionCode);
+        setSessionCode(sessionCode);
+        setIsCreator(false);
         setInChat(true);
-      }
-      
-      // Add system message
-      if (socketId !== newSocket.id) {
+        setUserCount(users);
+        setMessages([]);
+        setError('');
+        setLoading(false);
+      });
+
+      newSocket.on('session-error', ({ message }) => {
+        console.error('❌ Session error:', message);
+        setError(message);
+        setLoading(false);
+      });
+
+      newSocket.on('join-error', ({ message }) => {
+        console.error('❌ Join error:', message);
+        setError(message);
+        setLoading(false);
+      });
+
+      newSocket.on('user-joined', ({ users, socketId }) => {
+        console.log('User joined:', users);
+        setUserCount(users);
+        setInChat(true);
+      });
+
+      newSocket.on('user-left', () => {
+        console.log('User left');
+        setUserCount(1);
+      });
+
+      newSocket.on('receive-message', ({ message, sender, timestamp }) => {
         setMessages(prev => [...prev, {
-          type: 'system',
-          text: 'User joined the session',
-          timestamp: Date.now()
+          id: Date.now(),
+          text: message,
+          sender,
+          timestamp,
+          isOwn: sender === newSocket.id
         }]);
-      }
-    });
+      });
 
-    // User left
-    newSocket.on('user-left', () => {
-      console.log('👤 User left');
-      setUserCount(prev => Math.max(1, prev - 1));
-      setContacts(prev => prev.map(c => ({ ...c, isOnline: false })));
-      setMessages(prev => [...prev, {
-        type: 'system',
-        text: 'User left the session',
-        timestamp: Date.now()
-      }]);
-    });
+      newSocket.on('receive-media', ({ mediaData, mediaType, fileName, sender, timestamp }) => {
+        setMessages(prev => [...prev, {
+          id: Date.now(),
+          type: 'media',
+          mediaData,
+          mediaType,
+          fileName,
+          sender,
+          timestamp,
+          isOwn: sender === newSocket.id
+        }]);
+      });
 
-    // Receive message
-    newSocket.on('receive-message', ({ message, sender, timestamp }) => {
-      console.log('📨 Received:', message);
-      setMessages(prev => [...prev, {
-        type: 'text',
-        text: message,
-        isMine: false,
-        sender,
-        timestamp
-      }]);
-    });
+      newSocket.on('user-typing', ({ isTyping }) => {
+        // Handle typing indicator
+      });
 
-    // Receive media
-    newSocket.on('receive-media', ({ mediaData, mediaType, fileName, fileSize, sender, timestamp }) => {
-      console.log('📎 Received media:', fileName);
-      setMessages(prev => [...prev, {
-        type: 'media',
-        mediaData,
-        mediaType,
-        fileName,
-        fileSize,
-        isMine: false,
-        sender,
-        timestamp
-      }]);
-    });
+      newSocket.on('incoming-call', ({ offer, callType, from }) => {
+        // Handle incoming call
+      });
 
-    // Session expired
-    newSocket.on('session-expired', () => {
-      setError('Session expired');
-      handleLeaveSession();
-    });
+      newSocket.on('call-answered', ({ answer }) => {
+        // Handle call answered
+      });
 
-    setSocket(newSocket);
+      newSocket.on('ice-candidate', ({ candidate }) => {
+        // Handle ICE candidate
+      });
+
+      newSocket.on('call-ended', () => {
+        // Handle call ended
+      });
+
+      newSocket.on('call-rejected', () => {
+        // Handle call rejected
+      });
+
+      // Session expired
+      newSocket.on('session-expired', () => {
+        setError('Session expired');
+        handleLeaveSession();
+      });
+
+      setSocket(newSocket);
+    }, 1000);
 
     return () => {
-      newSocket.close();
+      clearTimeout(connectTimeout);
+      if (socket) {
+        socket.close();
+      }
     };
   }, [handleLeaveSession]);
 

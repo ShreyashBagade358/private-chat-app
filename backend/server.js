@@ -33,7 +33,7 @@ const io = socketIO(server, {
   maxHttpBufferSize: 10e6,
   pingTimeout: 60000,
   pingInterval: 25000,
-  transports: ['websocket', 'polling'],
+  transports: ['polling', 'websocket'],
 });
 
 app.use(cors(corsOptions));
